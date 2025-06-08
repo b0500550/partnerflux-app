@@ -1,0 +1,5 @@
+# 環境変数ファイル
+.env
+
+# バックエンドの依存関係フォルダ（最重要）
+partnerflux-backend/node_modules

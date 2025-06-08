@@ -1,0 +1,8 @@
+# Firebase Functions dependencies
+functions/node_modules
+
+# Logs
+*.log
+
+# API Keys & environment variables (if you use a .env file)
+.env
