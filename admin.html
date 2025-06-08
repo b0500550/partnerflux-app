@@ -12,7 +12,7 @@
         .admin-header { border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 25px; }
         .admin-title { font-size: 1.75rem; font-weight: 600; color: #343a40; }
         .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: #495057; }
-        .form-input { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; margin-bottom: 15px; }
+        .form-input, .edit-form-textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; margin-bottom: 15px; }
         .form-button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
         .form-button:hover { background-color: #0056b3; }
         .form-button:disabled { background-color: #6c757d; cursor: not-allowed; }
@@ -20,14 +20,25 @@
         .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .processing-indicator { display: none; margin-top: 10px; color: #007bff; }
+        .news-table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+        .news-table th, .news-table td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
+        .news-table th { background-color: #f8f9fa; }
+        .edit-button { background-color: #28a745; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+        .edit-button:hover { background-color: #218838; }
+        .delete-button { background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .delete-button:hover { background-color: #c82333; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background-color: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 1rem; margin-bottom: 1rem; }
+        .modal-title { font-size: 1.5rem; font-weight: 600; }
+        .close-button { font-size: 1.5rem; cursor: pointer; border: none; background: none; }
+        .edit-form-textarea { min-height: 120px; }
     </style>
 </head>
 <body>
     <div class="admin-container">
-        <div class="admin-header">
-            <h1 class="admin-title">PartnerFlux - ニュース記事登録</h1>
-        </div>
-
+        <div class="admin-header"><h1 class="admin-title">PartnerFlux - ニュース記事登録</h1></div>
+        <!-- ★★★★★ 省略されていたフォームを完全に記述 ★★★★★ -->
         <div>
             <form id="addNewsForm">
                 <div>
@@ -38,65 +49,198 @@
                 <div id="processingIndicator" class="processing-indicator">処理中... しばらくお待ちください。</div>
             </form>
         </div>
-
         <div id="messageArea" class="message-area" style="display: none;"></div>
 
         <div class="mt-8 pt-6 border-t border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">登録済みニュース</h2>
-            <p class="text-gray-500">（ここに一覧表示機能を追加予定）</p>
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">登録済みニュース一覧</h2>
+            <div class="overflow-x-auto">
+                <table class="news-table">
+                    <thead>
+                        <tr>
+                            <th>登録日</th>
+                            <th>タイトル</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="news-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 編集モーダルウィンドウ -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">ニュース情報の編集</h2>
+                <button id="closeModalButton" class="close-button">&times;</button>
+            </div>
+            <form id="editNewsForm">
+                <input type="hidden" id="editNewsId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label for="editTitle" class="form-label">タイトル</label><input type="text" id="editTitle" class="form-input"></div>
+                    <div><label for="editStartupName" class="form-label">スタートアップ名</label><input type="text" id="editStartupName" class="form-input"></div>
+                    <div><label for="editRound" class="form-label">ラウンド</label><input type="text" id="editRound" class="form-input"></div>
+                    <div><label for="editFundingAmount" class="form-label">調達金額</label><input type="text" id="editFundingAmount" class="form-input"></div>
+                </div>
+                <div><label for="editLeadInvestor" class="form-label">リード投資家</label><input type="text" id="editLeadInvestor" class="form-input"></div>
+                <div><label for="editSummary" class="form-label">サマリ</label><textarea id="editSummary" class="edit-form-textarea"></textarea></div>
+                <div><label for="editPositiveAnalysis" class="form-label">ポジティブ分析</label><textarea id="editPositiveAnalysis" class="edit-form-textarea"></textarea></div>
+                <div><label for="editNegativeAnalysis" class="form-label">ネガティブ分析</label><textarea id="editNegativeAnalysis" class="edit-form-textarea"></textarea></div>
+                <div><label for="editExitOutlook" class="form-label">Exitの見立て</label><textarea id="editExitOutlook" class="edit-form-textarea"></textarea></div>
+                <div class="text-right mt-4">
+                    <button type="submit" class="form-button">変更を保存</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, query, getDocs, orderBy, doc, deleteDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         const messageArea = document.getElementById('messageArea');
         const submitButton = document.getElementById('submitButton');
+        const newsListBody = document.getElementById('news-list-body');
+        const editModal = document.getElementById('editModal');
+        const closeModalButton = document.getElementById('closeModalButton');
+        const editNewsForm = document.getElementById('editNewsForm');
+        
         submitButton.disabled = true;
 
         try {
-            // Viteの環境変数からFirebase設定を読み込む
             const env = import.meta.env;
-            if (!env || !env.VITE_FIREBASE_API_KEY) {
-                throw new Error("Firebaseの環境変数が読み込めていません。.envファイルが正しく設定されているか、開発サーバーを再起動したか確認してください。");
-            }
-            
-            const firebaseConfig = {
-                apiKey: env.VITE_FIREBASE_API_KEY,
-                authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
-                projectId: env.VITE_FIREBASE_PROJECT_ID,
-                storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
-                messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-                appId: env.VITE_FIREBASE_APP_ID,
-            };
+            if (!env || !env.VITE_FIREBASE_API_KEY) { throw new Error("Firebaseの環境変数が読み込めていません。"); }
+            const firebaseConfig = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID, };
 
-            let auth;
-            let userId = null;
-
+            let auth, userId = null, db;
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
+            db = getFirestore(app);
 
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
-                    console.log("User is signed in with UID:", userId);
                     submitButton.disabled = false;
+                    fetchAndDisplayNews();
                 } else {
-                    console.log("User is signed out. Trying to sign in...");
-                    await signInAnonymously(auth).catch(err => {
-                        console.error(err);
-                        displayMessage("認証に失敗しました。", true);
+                    await signInAnonymously(auth).catch(err => displayMessage("認証に失敗しました。", true));
+                }
+            });
+            
+            const newsCollectionPath = `artifacts/${firebaseConfig.projectId}/public/data/news`;
+
+            // ★★★★★ 省略されていたデータ取得ロジックを完全に記述 ★★★★★
+            async function fetchAndDisplayNews() {
+                newsListBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">ニュースを読み込んでいます...</td></tr>`;
+                try {
+                    const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"));
+                    const querySnapshot = await getDocs(q);
+
+                    newsListBody.innerHTML = ''; 
+                    if (querySnapshot.empty) {
+                        newsListBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">登録済みのニュースはありません。</td></tr>`;
+                        return;
+                    }
+
+                    querySnapshot.forEach(doc => {
+                        const news = doc.data();
+                        const date = news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
+                        const row = `
+                            <tr>
+                                <td>${date}</td>
+                                <td>${news.title || '(タイトルなし)'}</td>
+                                <td class="whitespace-nowrap">
+                                    <button class="edit-button" data-id="${doc.id}">編集</button>
+                                    <button class="delete-button" data-id="${doc.id}">削除</button>
+                                </td>
+                            </tr>
+                        `;
+                        newsListBody.insertAdjacentHTML('beforeend', row);
                     });
+                } catch (error) {
+                    console.error("ニュース一覧の取得に失敗しました:", error);
+                    newsListBody.innerHTML = `<tr><td colspan="3" class="text-center p-4 text-red-500">一覧の読み込みに失敗しました。</td></tr>`;
+                }
+            }
+
+            newsListBody.addEventListener('click', async (event) => {
+                const target = event.target;
+                const newsId = target.dataset.id;
+
+                if (target.classList.contains('edit-button')) {
+                    const docRef = doc(db, newsCollectionPath, newsId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        document.getElementById('editNewsId').value = newsId;
+                        document.getElementById('editTitle').value = data.title || '';
+                        document.getElementById('editStartupName').value = data.startupName || '';
+                        document.getElementById('editRound').value = data.round || '';
+                        document.getElementById('editFundingAmount').value = data.fundingAmount || '';
+                        document.getElementById('editLeadInvestor').value = data.leadInvestor || '';
+                        document.getElementById('editSummary').value = data.summary || '';
+                        document.getElementById('editPositiveAnalysis').value = data.positiveAnalysis || '';
+                        document.getElementById('editNegativeAnalysis').value = data.negativeAnalysis || '';
+                        document.getElementById('editExitOutlook').value = data.exitOutlook || '';
+                        editModal.style.display = 'flex';
+                    }
+                }
+                
+                if (target.classList.contains('delete-button')) {
+                    if (confirm(`この記事を本当に削除しますか？この操作は元に戻せません。`)) {
+                        try {
+                            await deleteDoc(doc(db, newsCollectionPath, newsId));
+                            displayMessage("ニュースを削除しました。", false);
+                            fetchAndDisplayNews();
+                        } catch (error) {
+                            console.error("削除中にエラーが発生しました:", error);
+                            displayMessage("削除に失敗しました。", true);
+                        }
+                    }
+                }
+            });
+
+            closeModalButton.addEventListener('click', () => {
+                editModal.style.display = 'none';
+            });
+            editModal.addEventListener('click', (event) => {
+                if (event.target === editModal) {
+                    editModal.style.display = 'none';
+                }
+            });
+
+            editNewsForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const newsId = document.getElementById('editNewsId').value;
+                const updatedData = {
+                    title: document.getElementById('editTitle').value,
+                    startupName: document.getElementById('editStartupName').value,
+                    round: document.getElementById('editRound').value,
+                    fundingAmount: document.getElementById('editFundingAmount').value,
+                    leadInvestor: document.getElementById('editLeadInvestor').value,
+                    summary: document.getElementById('editSummary').value,
+                    positiveAnalysis: document.getElementById('editPositiveAnalysis').value,
+                    negativeAnalysis: document.getElementById('editNegativeAnalysis').value,
+                    exitOutlook: document.getElementById('editExitOutlook').value,
+                };
+                try {
+                    const docRef = doc(db, newsCollectionPath, newsId);
+                    await updateDoc(docRef, updatedData);
+                    displayMessage("ニュース情報を更新しました。", false);
+                    editModal.style.display = 'none';
+                    fetchAndDisplayNews();
+                } catch (error) {
+                    console.error("更新中にエラー:", error);
+                    displayMessage("更新に失敗しました。", true);
                 }
             });
 
             const newsForm = document.getElementById('addNewsForm');
             const newsUrlInput = document.getElementById('newsUrl');
             const processingIndicator = document.getElementById('processingIndicator');
-
             const functionUrl = "https://asia-northeast1-partnerflux.cloudfunctions.net/processNewsUrl";
-
             newsForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
                 const url = newsUrlInput.value.trim();
@@ -105,15 +249,13 @@
                     return;
                 }
                 if (!userId) {
-                    displayMessage("ユーザー認証が完了していません。しばらく待ってから再試行してください。", true);
+                    displayMessage("ユーザー認証が完了していません。", true);
                     return;
                 }
 
-                console.log("バックエンド関数を呼び出します:", functionUrl);
                 submitButton.disabled = true;
                 processingIndicator.style.display = 'block';
-                displayMessage("記事を分析中です... これには数分かかることがあります。", false);
-
+                displayMessage("記事を分析中です...", false);
                 try {
                     const response = await fetch(functionUrl, {
                         method: 'POST',
@@ -122,13 +264,12 @@
                     });
                     const result = await response.json();
                     if (!response.ok) {
-                        throw new Error(result.message || `サーバーエラーが発生しました (ステータス: ${response.status})`);
+                        throw new Error(result.message || `サーバーエラー`);
                     }
-                    console.log("バックエンドからの応答:", result);
-                    displayMessage(`ニュース「${result.data.title}」の分析と保存が完了しました。`, false);
+                    displayMessage(`「${result.data.title}」を登録しました。`, false);
                     newsUrlInput.value = '';
+                    fetchAndDisplayNews();
                 } catch (error) {
-                    console.error("バックエンド関数の呼び出し中にエラーが発生しました:", error);
                     displayMessage(`エラー: ${error.message}`, true);
                 } finally {
                     submitButton.disabled = false;
@@ -142,7 +283,7 @@
         }
 
         function displayMessage(message, isError = false) {
-            messageArea.textContent = message;
+           messageArea.textContent = message;
             messageArea.className = 'message-area'; 
             if (message) {
                 messageArea.style.display = 'block';
