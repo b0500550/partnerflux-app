@@ -38,7 +38,6 @@
 <body>
     <div class="admin-container">
         <div class="admin-header"><h1 class="admin-title">PartnerFlux - ニュース記事登録</h1></div>
-        <!-- ★★★★★ 省略されていたフォームを完全に記述 ★★★★★ -->
         <div>
             <form id="addNewsForm">
                 <div>
@@ -68,7 +67,6 @@
         </div>
     </div>
 
-    <!-- 編集モーダルウィンドウ -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -80,6 +78,10 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label for="editTitle" class="form-label">タイトル</label><input type="text" id="editTitle" class="form-input"></div>
                     <div><label for="editStartupName" class="form-label">スタートアップ名</label><input type="text" id="editStartupName" class="form-input"></div>
+                </div>
+                <!-- ★★★★★ 事業内容の入力欄を追加 ★★★★★ -->
+                <div><label for="editBusinessDescription" class="form-label">事業内容</label><input type="text" id="editBusinessDescription" class="form-input"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label for="editRound" class="form-label">ラウンド</label><input type="text" id="editRound" class="form-input"></div>
                     <div><label for="editFundingAmount" class="form-label">調達金額</label><input type="text" id="editFundingAmount" class="form-input"></div>
                 </div>
@@ -131,7 +133,6 @@
             
             const newsCollectionPath = `artifacts/${firebaseConfig.projectId}/public/data/news`;
 
-            // ★★★★★ 省略されていたデータ取得ロジックを完全に記述 ★★★★★
             async function fetchAndDisplayNews() {
                 newsListBody.innerHTML = `<tr><td colspan="3" class="text-center p-4">ニュースを読み込んでいます...</td></tr>`;
                 try {
@@ -177,6 +178,8 @@
                         document.getElementById('editNewsId').value = newsId;
                         document.getElementById('editTitle').value = data.title || '';
                         document.getElementById('editStartupName').value = data.startupName || '';
+                        // ★★★★★ 事業内容のデータをフォームに設定 ★★★★★
+                        document.getElementById('editBusinessDescription').value = data.businessDescription || ''; 
                         document.getElementById('editRound').value = data.round || '';
                         document.getElementById('editFundingAmount').value = data.fundingAmount || '';
                         document.getElementById('editLeadInvestor').value = data.leadInvestor || '';
@@ -202,14 +205,8 @@
                 }
             });
 
-            closeModalButton.addEventListener('click', () => {
-                editModal.style.display = 'none';
-            });
-            editModal.addEventListener('click', (event) => {
-                if (event.target === editModal) {
-                    editModal.style.display = 'none';
-                }
-            });
+            closeModalButton.addEventListener('click', () => { editModal.style.display = 'none'; });
+            editModal.addEventListener('click', (event) => { if (event.target === editModal) { editModal.style.display = 'none'; } });
 
             editNewsForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
@@ -217,6 +214,8 @@
                 const updatedData = {
                     title: document.getElementById('editTitle').value,
                     startupName: document.getElementById('editStartupName').value,
+                    // ★★★★★ 事業内容のデータを保存対象に追加 ★★★★★
+                    businessDescription: document.getElementById('editBusinessDescription').value,
                     round: document.getElementById('editRound').value,
                     fundingAmount: document.getElementById('editFundingAmount').value,
                     leadInvestor: document.getElementById('editLeadInvestor').value,
@@ -244,14 +243,8 @@
             newsForm.addEventListener('submit', async function(event) {
                 event.preventDefault();
                 const url = newsUrlInput.value.trim();
-                if (!url) {
-                    displayMessage("URLを入力してください。", true);
-                    return;
-                }
-                if (!userId) {
-                    displayMessage("ユーザー認証が完了していません。", true);
-                    return;
-                }
+                if (!url) { displayMessage("URLを入力してください。", true); return; }
+                if (!userId) { displayMessage("ユーザー認証が完了していません。", true); return; }
 
                 submitButton.disabled = true;
                 processingIndicator.style.display = 'block';
@@ -263,9 +256,7 @@
                         body: JSON.stringify({ url: url, userId: userId }),
                     });
                     const result = await response.json();
-                    if (!response.ok) {
-                        throw new Error(result.message || `サーバーエラー`);
-                    }
+                    if (!response.ok) { throw new Error(result.message || `サーバーエラー`); }
                     displayMessage(`「${result.data.title}」を登録しました。`, false);
                     newsUrlInput.value = '';
                     fetchAndDisplayNews();

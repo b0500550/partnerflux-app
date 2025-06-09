@@ -9,7 +9,7 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
         .header-section { background-color: #ffffff; border-bottom: 1px solid #e5e7eb; }
-        .logo-container img { max-height: 40px; }
+        .logo-container img { max-height: 96px; }
         .content-section { background-color: white; border: 1px solid #e5e7eb; }
         .section-title { color: #1f2937; border-bottom: 2px solid #2c3e50; padding-bottom: 0.5rem; }
         .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
@@ -19,16 +19,17 @@
         .analysis-text p { line-height: 1.7; color: #4b5563; white-space: pre-wrap; }
         .startup-icon-placeholder-large { width: 64px; height: 64px; background-color: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #495057; border-radius: 50%; }
         .loading-container { text-align: center; padding: 4rem; }
+        .highlight-section { background-color: #f8f9fa; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e9ecef; }
     </style>
 </head>
 <body class="text-gray-800">
 
     <header class="header-section shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="index.html" class="logo-container"><img src="logo.jpg" alt="PartnerFlux Logo" class="h-10" onerror="this.style.display='none'"></a>
+            <a href="/" class="logo-container"><img src="/logo.jpg" alt="PartnerFlux Logo" class="h-24"></a>
             <nav>
-                <a href="index.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">トップ</a>
-                <a href="funding-list.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">資金調達一覧</a>
+                <a href="/" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">トップ</a>
+                <a href="/funding-list.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">資金調達一覧</a>
             </nav>
         </div>
     </header>
@@ -37,36 +38,25 @@
         <div id="loading" class="loading-container"><p class="text-gray-600">記事データを読み込んでいます...</p></div>
     </main>
 
-    <footer class="bg-gray-900 text-gray-400 mt-16">
-        <div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div>
-    </footer>
+    <footer class="bg-gray-900 text-gray-400 mt-16"><div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div></footer>
 
 <script type="module">
 const mainContent = document.getElementById('main-content');
 const functionUrl = "https://asia-northeast1-partnerflux.cloudfunctions.net/getNewsDetail";
 
-// 1. URLから記事IDを取得
 const params = new URLSearchParams(window.location.search);
 const newsId = params.get('id');
 
 async function fetchNewsDetail() {
-    if (!newsId) {
-        mainContent.innerHTML = `<p class="text-center text-red-500">記事IDが指定されていません。</p>`;
-        return;
-    }
-
+    if (!newsId) { mainContent.innerHTML = `<p class="text-center text-red-500">記事IDが指定されていません。</p>`; return; }
     try {
-        // 2. バックエンド関数を呼び出す
         const response = await fetch(`${functionUrl}?id=${newsId}`);
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`サーバーエラー: ${response.status} - ${errorText}`);
         }
         const news = await response.json();
-        
-        // 3. 取得したデータでページを構築
         displayNews(news);
-
     } catch (error) {
         console.error("データ取得エラー:", error);
         mainContent.innerHTML = `<p class="text-center text-red-500">データの読み込みに失敗しました。</p>`;
@@ -74,40 +64,58 @@ async function fetchNewsDetail() {
 }
 
 function displayNews(news) {
-    const date = new Date(news.registeredAt).toLocaleDateString('ja-JP');
+    const displayDate = (news.publicationDate && news.publicationDate !== '不明')
+        ? news.publicationDate
+        : (news.registeredAt ? new Date(news.registeredAt).toLocaleDateString('ja-JP') : '日付不明');
+
     const contentHtml = `
         <div class="content-section rounded-xl shadow-xl overflow-hidden p-8 md:p-12">
             <div class="mb-8 pb-6 border-b border-gray-200">
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">${news.title || ''}</h1>
-                <p class="text-md text-gray-500">公開日: ${date}</p>
+                <p class="text-md text-gray-500">公開日: ${displayDate}</p>
             </div>
             <div class="flex flex-col md:flex-row items-start md:items-center mb-10">
                 <div class="startup-icon-placeholder-large mr-0 md:mr-6 mb-4 md:mb-0 flex-shrink-0"><span>💡</span></div>
-                <div><h2 class="text-2xl font-semibold text-gray-800 mb-1">${news.startupName || ''}</h2></div>
+                <div>
+                    <div class="flex items-center space-x-3">
+                        <h2 class="text-2xl font-semibold text-gray-800">${news.startupName || ''}</h2>
+                        <a href="https://www.google.com/search?q=${encodeURIComponent(news.startupName)}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:underline font-light">会社情報</a>
+                    </div>
+                    <p class="text-gray-600 mt-1">${news.businessDescription || ''}</p>
+                </div>
             </div>
             <div class="info-grid mb-10">
                 <div class="info-item"><span class="info-label">ラウンド</span><p class="info-value">${news.round || '不明'}</p></div>
                 <div class="info-item"><span class="info-label">調達金額</span><p class="info-value">${news.fundingAmount || '不明'}</p></div>
                 <div class="info-item"><span class="info-label">リード投資家</span><p class="info-value">${news.leadInvestor || '不明'}</p></div>
             </div>
-            <section class="mb-10">
-                <h3 class="text-xl font-semibold section-title mb-4">サマリ</h3>
+            
+            <section class="mb-10 highlight-section">
+                <h3 class="text-xl font-semibold section-title mb-4">ハイライト</h3>
                 <div class="analysis-text space-y-3"><p>${news.summary || ''}</p></div>
             </section>
+            
             <section class="mb-10">
-                <h3 class="text-xl font-semibold section-title mb-4">ポジティブ分析</h3>
+                <h3 class="text-xl font-semibold section-title mb-4">VCによるグロース評価ポイント</h3>
                 <div class="analysis-text space-y-3"><p>${news.positiveAnalysis || ''}</p></div>
             </section>
             <section class="mb-10">
-                <h3 class="text-xl font-semibold section-title mb-4">ネガティブ分析</h3>
+                <h3 class="text-xl font-semibold section-title mb-4">VC視点のリスクアラート</h3>
                 <div class="analysis-text space-y-3"><p>${news.negativeAnalysis || ''}</p></div>
             </section>
             <section class="mb-6">
-                <h3 class="text-xl font-semibold section-title mb-4">Exitの見立て</h3>
+                <h3 class="text-xl font-semibold section-title mb-4">VCが見るExitスコープ</h3>
                 <div class="analysis-text space-y-3"><p>${news.exitOutlook || ''}</p></div>
             </section>
-            <div class="mt-12 text-center">
-                <a href="funding-list.html" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out">一覧へ戻る</a>
+
+            <!-- ★★★★★ 最下段のレイアウトを修正 ★★★★★ -->
+            <div class="mt-12">
+                <div class="text-right mb-4">
+                    ${news.originalUrl ? `<a href="${news.originalUrl}" target="_blank" rel="noopener noreferrer" class="text-sm text-gray-500 hover:text-gray-700 hover:underline">情報ソース: PR TIMES</a>` : ''}
+                </div>
+                <div class="text-center">
+                    <a href="/funding-list.html" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out">一覧へ戻る</a>
+                </div>
             </div>
         </div>
     `;

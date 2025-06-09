@@ -14,39 +14,34 @@
         .nav-button:hover { background-color: #34495e; }
         .news-header { color: #1f2937; }
         .table-header-cell { background-color: #e9ecef; color: #495057; }
-        .logo-container img { max-height: 40px; }
+        .logo-container img { max-height: 96px; }
         .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; margin: 2rem auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <!-- ヘッダー -->
     <header class="header-section shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="logo-container">
-                <!-- publicフォルダのロゴを指すようにパスを修正 -->
-                <img src="/logo.jpg" alt="PartnerFlux Logo" class="h-10">
+                <img src="/logo.jpg" alt="PartnerFlux Logo" class="h-24">
             </div>
         </div>
     </header>
 
-    <!-- メインコンテンツ -->
     <main class="container mx-auto px-6 py-12">
 
-        <!-- サイト説明 -->
         <section class="mb-16 p-8 rounded-xl shadow-lg bg-white">
             <h2 class="text-3xl font-semibold news-header mb-6">PartnerFluxとは</h2>
-            <p class="text-gray-700 leading-relaxed text-lg">
-                国内スタートアップの資金調達や大企業との提携について情報をまとめるサイトです。
-                資金調達の情報サイトはたくさんありますが、大企業との提携にもフォーカスする点が特徴です。
-                また、AIを駆使して様々なニュースにポジティブ、ネガティブなコメントをつけて分析することが特徴です。
-            </p>
+            <!-- ★★★★★ 説明文のスタイルを変更 ★★★★★ -->
+            <div class="text-gray-700 leading-relaxed text-lg">
+                <p class="font-bold text-xl mb-2">AI×プロVCが紐解くスタートアップの資金調達&事業提携データベース</p>
+                <p>情報の裏に潜むドラマをAIとプロVCが読み解き、ポジティブ・ネガティブ両面で鋭く分析。あなたの次の意思決定を0.5秒短縮します。</p>
+            </div>
         </section>
 
         <!-- 機能別ボタン -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
-            <!-- パスを絶対パスに変更 -->
             <a href="/funding-list.html" class="nav-button p-6 rounded-lg shadow-md text-center transition-transform transform hover:scale-105 duration-300 ease-in-out flex flex-col items-center justify-center h-48">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-12 w-12 mb-3"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
                 <h3 class="text-xl font-semibold">資金調達</h3>
@@ -57,27 +52,31 @@
                 <h3 class="text-xl font-semibold">事業提携</h3>
                 <p class="text-sm opacity-80">Alliance (Coming Soon)</p>
             </a>
+            <a href="#" class="nav-button bg-gray-400 cursor-not-allowed p-6 rounded-lg shadow-md text-center flex flex-col items-center justify-center h-48">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bar-chart-big h-12 w-12 mb-3"><path d="M3 3v18h18"/><path d="M7 12h3v9H7z"/><path d="M12 7h3v14h-3z"/><path d="M17 14h3v7h-3z"/></svg>
+                <h3 class="text-xl font-semibold">事例分析</h3>
+                <p class="text-sm opacity-80">Analysis (Coming Soon)</p>
+            </a>
+            <a href="#" class="nav-button bg-gray-400 cursor-not-allowed p-6 rounded-lg shadow-md text-center flex flex-col items-center justify-center h-48">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-database h-12 w-12 mb-3"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 12 22A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 12 15A9 3 0 0 0 21 12"/></svg>
+                <h3 class="text-xl font-semibold">外部レポート</h3>
+                <p class="text-sm opacity-80">Database (Coming Soon)</p>
+            </a>
         </section>
 
-        <!-- 最新ニュース -->
         <section class="bg-white p-8 rounded-xl shadow-lg">
-            <h2 class="text-3xl font-semibold news-header mb-6">Recent news</h2>
+            <h2 class="text-3xl font-semibold news-header mb-6">Recent News</h2>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-300">
-                    <thead>
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th scope="col" class="px-6 py-4 text-left text-sm font-semibold table-header-cell uppercase tracking-wider">日付</th>
-                            <th scope="col" class="px-6 py-4 text-left text-sm font-semibold table-header-cell uppercase tracking-wider">ニュースタイトル</th>
-                            <th scope="col" class="px-6 py-4 text-left text-sm font-semibold table-header-cell uppercase tracking-wider">分類</th>
+                            <th scope="col" class="px-6 py-4 text-left text-sm font-semibold table-header-cell uppercase tracking-wider">Date</th>
+                            <th scope="col" class="px-6 py-4 text-left text-sm font-semibold table-header-cell uppercase tracking-wider">Title</th>
+                            <th scope="col" class="px-6 py-4 text-left text-sm font-semibold table-header-cell uppercase tracking-wider">Category</th>
                         </tr>
                     </thead>
                     <tbody id="recent-news-body" class="bg-white divide-y divide-gray-200">
-                        <tr>
-                            <td colspan="3" class="text-center py-10">
-                                <div class="loading-spinner"></div>
-                                <p class="text-gray-500">最新ニュースを読み込み中...</p>
-                            </td>
-                        </tr>
+                        <tr><td colspan="3" class="text-center py-10"><div class="loading-spinner"></div><p class="text-gray-500">最新ニュースを読み込み中...</p></td></tr>
                     </tbody>
                 </table>
             </div>
@@ -87,12 +86,7 @@
         </section>
     </main>
 
-    <!-- フッター -->
-    <footer class="bg-gray-900 text-gray-400 mt-16">
-        <div class="container mx-auto px-6 py-8 text-center">
-            <p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p>
-        </div>
-    </footer>
+    <footer class="bg-gray-900 text-gray-400 mt-16"><div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div></footer>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -102,39 +96,21 @@ import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gsta
 const newsContainer = document.getElementById('recent-news-body');
 
 try {
-    // .envファイルから環境変数を読み込む
     const env = import.meta.env;
-    if (!env || !env.VITE_FIREBASE_API_KEY) {
-        throw new Error("Firebaseの環境変数が読み込めていません。.envファイルが正しく設定されているか、開発サーバーを再起動したか確認してください。");
-    }
-
-    const firebaseConfig = {
-        apiKey: env.VITE_FIREBASE_API_KEY,
-        authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
-        projectId: env.VITE_FIREBASE_PROJECT_ID,
-        storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-        appId: env.VITE_FIREBASE_APP_ID,
-    };
-
-    // Firebaseの初期化と認証
+    if (!env || !env.VITE_FIREBASE_API_KEY) { throw new Error("Firebaseの環境変数が読み込めていません。"); }
+    const firebaseConfig = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
 
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            fetchRecentNews(db, firebaseConfig.projectId);
-        } else {
-            signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error));
-        }
+        if (user) { fetchRecentNews(db, firebaseConfig.projectId); } 
+        else { signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error)); }
     });
-
 } catch (error) {
     console.error(error);
     newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-red-500">${error.message}</td></tr>`;
 }
-
 
 async function fetchRecentNews(db, projectId) {
     try {
@@ -143,36 +119,28 @@ async function fetchRecentNews(db, projectId) {
         const querySnapshot = await getDocs(q);
 
         newsContainer.innerHTML = ''; 
-
-        if (querySnapshot.empty) {
-            newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-gray-500">登録されているニュースがありません。</td></tr>`;
-            return;
-        }
+        if (querySnapshot.empty) { newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-gray-500">登録されているニュースがありません。</td></tr>`; return; }
 
         querySnapshot.forEach((doc) => {
             const newsItem = { id: doc.id, ...doc.data() };
-            const date = newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
+            const displayDate = (newsItem.publicationDate && newsItem.publicationDate !== '不明')
+                ? newsItem.publicationDate
+                : (newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
             
             const newsRowHtml = `
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap text-md text-gray-600">${date}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-md text-gray-800 font-medium">
-                        <a href="/news-detail.html?id=${newsItem.id}" class="hover:text-blue-600">${newsItem.title || 'タイトルなし'}</a>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-sky-100 text-sky-700">#資金調達</span>
-                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-md text-gray-600">${displayDate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-md text-gray-800 font-medium"><a href="/news-detail.html?id=${newsItem.id}" class="hover:text-blue-600">${newsItem.title || 'タイトルなし'}</a></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm"><span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-sky-100 text-sky-700">#資金調達</span></td>
                 </tr>
             `;
             newsContainer.insertAdjacentHTML('beforeend', newsRowHtml);
         });
-
     } catch (error) {
         console.error("最新ニュースの取得中にエラーが発生しました: ", error);
         newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-red-500">ニュースの読み込みに失敗しました。</td></tr>`;
     }
 }
 </script>
-
 </body>
 </html>

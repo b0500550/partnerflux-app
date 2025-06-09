@@ -9,7 +9,8 @@
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
         .header-section { background-color: #ffffff; border-bottom: 1px solid #e5e7eb; }
-        .logo-container img { max-height: 40px; }
+        /* ★★★★★ ロゴの高さを調整 ★★★★★ */
+        .logo-container img { max-height: 96px; }
         .page-title-section { background-color: #2c3e50; color: white; }
         .news-card { background-color: white; border: 1px solid #e5e7eb; transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out; }
         .news-card:hover { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); transform: translateY(-5px); }
@@ -22,7 +23,7 @@
 
     <header class="header-section shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <a href="/" class="logo-container"><img src="/logo.jpg" alt="PartnerFlux Logo" class="h-10"></a>
+            <a href="/" class="logo-container"><img src="/logo.jpg" alt="PartnerFlux Logo" class="h-24"></a>
             <nav><a href="/" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">トップ</a></nav>
         </div>
     </header>
@@ -46,9 +47,7 @@
         </div>
     </main>
 
-    <footer class="bg-gray-900 text-gray-400 mt-16">
-        <div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div>
-    </footer>
+    <footer class="bg-gray-900 text-gray-400 mt-16"><div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div></footer>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -60,29 +59,14 @@ const loadingIndicator = document.getElementById('loading');
 
 try {
     const env = import.meta.env;
-    if (!env || !env.VITE_FIREBASE_API_KEY) {
-        throw new Error("Firebaseの環境変数が読み込めていません。.envファイルが正しく設定されているか、開発サーバーを再起動したか確認してください。");
-    }
-
-    const firebaseConfig = {
-        apiKey: env.VITE_FIREBASE_API_KEY,
-        authDomain: env.VITE_FIREBASE_AUTH_DOMAIN,
-        projectId: env.VITE_FIREBASE_PROJECT_ID,
-        storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET,
-        messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-        appId: env.VITE_FIREBASE_APP_ID,
-    };
-
+    if (!env || !env.VITE_FIREBASE_API_KEY) { throw new Error("Firebaseの環境変数が読み込めていません。");}
+    const firebaseConfig = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
-
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            fetchNews(db, firebaseConfig.projectId);
-        } else {
-            signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error));
-        }
+        if (user) { fetchNews(db, firebaseConfig.projectId); } 
+        else { signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error)); }
     });
 } catch(error) {
     console.error(error);
@@ -90,35 +74,31 @@ try {
     newsListContainer.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
 }
 
-
 async function fetchNews(db, projectId) {
     const newsCollectionPath = `artifacts/${projectId}/public/data/news`;
     try {
         const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"));
         const querySnapshot = await getDocs(q);
-
         const newsList = [];
-        querySnapshot.forEach((doc) => {
-            newsList.push({ id: doc.id, ...doc.data() });
-        });
+        querySnapshot.forEach((doc) => newsList.push({ id: doc.id, ...doc.data() }));
 
         if (loadingIndicator) loadingIndicator.style.display = 'none';
         newsListContainer.innerHTML = ''; 
-        
-        if (newsList.length === 0) {
-            newsListContainer.innerHTML = `<p class="text-center text-gray-500">登録されているニュースがありません。</p>`;
-            return;
-        }
+        if (newsList.length === 0) { newsListContainer.innerHTML = `<p class="text-center text-gray-500">登録されているニュースがありません。</p>`; return; }
 
         newsList.forEach((newsItem) => {
-            const date = newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
+            // ★★★★★ 日付の表示ロジックを更新 ★★★★★
+            const displayDate = (newsItem.publicationDate && newsItem.publicationDate !== '不明')
+                ? newsItem.publicationDate
+                : (newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
+
             const newsCardHtml = `
                 <div class="news-card rounded-xl shadow-lg overflow-hidden">
                     <a href="/news-detail.html?id=${newsItem.id}" class="block p-6">
                         <div class="flex items-start space-x-4">
                             <div class="startup-icon-placeholder rounded-full flex-shrink-0"><span>💡</span></div>
                             <div class="flex-grow">
-                                <div class="flex justify-between items-center mb-1"><p class="text-sm text-gray-500">${date}</p></div>
+                                <div class="flex justify-between items-center mb-1"><p class="text-sm text-gray-500">${displayDate}</p></div>
                                 <h3 class="text-xl font-semibold text-gray-800 mb-1 hover:text-blue-600">${newsItem.startupName || '不明'}</h3>
                                 <p class="text-md text-gray-700 leading-relaxed">${newsItem.title || '不明'}</p>
                             </div>
@@ -128,7 +108,6 @@ async function fetchNews(db, projectId) {
             `;
             newsListContainer.insertAdjacentHTML('beforeend', newsCardHtml);
         });
-
     } catch (error) {
         console.error("データの取得中にエラーが発生しました: ", error);
         if (loadingIndicator) loadingIndicator.style.display = 'none';
