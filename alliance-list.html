@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>資金調達情報 - PartnerFlux</title>
+    <title>事業提携情報 - PartnerFlux</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -27,13 +27,14 @@
         </div>
     </header>
 
+    <!-- ★★★★★ 見出しとアイコンを変更 ★★★★★ -->
     <section class="page-title-section py-12">
         <div class="container mx-auto px-6 text-center">
             <div class="flex items-center justify-center mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-12 w-12 mr-3 text-white"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-                <h1 class="text-4xl font-bold text-white">資金調達</h1>
+                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-briefcase h-12 w-12 mr-3 text-white"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                <h1 class="text-4xl font-bold text-white">事業提携</h1>
             </div>
-            <p class="text-lg text-gray-300">Fundraising - 最新の資金調達ニュース一覧</p>
+            <p class="text-lg text-gray-300">Alliance - 最新の事業提携ニュース一覧</p>
         </div>
     </section>
 
@@ -77,10 +78,10 @@ try {
 async function fetchNews(db, projectId) {
     const newsCollectionPath = `artifacts/${projectId}/public/data/news`;
     try {
-        // ★★★★★ Firestoreのクエリに category === 'funding' の条件を追加 ★★★★★
+        // ★★★★★ Firestoreのクエリに category === 'alliance' の条件を追加 ★★★★★
         const q = query(
             collection(db, newsCollectionPath), 
-            where("category", "==", "funding"),
+            where("category", "==", "alliance"), 
             orderBy("registeredAt", "desc")
         );
         const querySnapshot = await getDocs(q);
@@ -89,21 +90,24 @@ async function fetchNews(db, projectId) {
 
         if (loadingIndicator) loadingIndicator.style.display = 'none';
         newsListContainer.innerHTML = ''; 
-        if (newsList.length === 0) { newsListContainer.innerHTML = `<p class="text-center text-gray-500">登録されている資金調達ニュースがありません。</p>`; return; }
+        if (newsList.length === 0) { newsListContainer.innerHTML = `<p class="text-center text-gray-500">登録されている事業提携ニュースがありません。</p>`; return; }
 
         newsList.forEach((newsItem) => {
             const displayDate = (newsItem.publicationDate && newsItem.publicationDate !== '不明')
                 ? newsItem.publicationDate
                 : (newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
+            
+            // ★★★★★ カードに表示する企業名を primaryCompany と partnerCompany に変更 ★★★★★
+            const companyNames = `${newsItem.primaryCompany || '企業A'} × ${newsItem.partnerCompany || '企業B'}`;
 
             const newsCardHtml = `
                 <div class="news-card rounded-xl shadow-lg overflow-hidden">
                     <a href="/news-detail.html?id=${newsItem.id}" class="block p-6">
                         <div class="flex items-start space-x-4">
-                            <div class="startup-icon-placeholder rounded-full flex-shrink-0"><span>💡</span></div>
+                            <div class="startup-icon-placeholder rounded-full flex-shrink-0"><span>🤝</span></div>
                             <div class="flex-grow">
                                 <div class="flex justify-between items-center mb-1"><p class="text-sm text-gray-500">${displayDate}</p></div>
-                                <h3 class="text-xl font-semibold text-gray-800 mb-1 hover:text-blue-600">${newsItem.startupName || '不明'}</h3>
+                                <h3 class="text-xl font-semibold text-gray-800 mb-1 hover:text-blue-600">${companyNames}</h3>
                                 <p class="text-md text-gray-700 leading-relaxed">${newsItem.title || '不明'}</p>
                             </div>
                         </div>

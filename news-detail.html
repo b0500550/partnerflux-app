@@ -16,7 +16,7 @@
         .info-item { background-color: #f8f9fa; padding: 1rem; border-radius: 0.5rem; border: 1px solid #e9ecef; }
         .info-label { font-weight: 600; color: #495057; margin-bottom: 0.25rem; display: block; }
         .info-value { color: #212529; }
-        .analysis-text p { line-height: 1.7; color: #4b5563; white-space: pre-wrap; }
+        .analysis-text { line-height: 1.8; color: #4b5563; white-space: pre-wrap; }
         .startup-icon-placeholder-large { width: 64px; height: 64px; background-color: #e9ecef; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #495057; border-radius: 50%; }
         .loading-container { text-align: center; padding: 4rem; }
         .highlight-section { background-color: #f8f9fa; padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e9ecef; }
@@ -30,6 +30,7 @@
             <nav>
                 <a href="/" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">トップ</a>
                 <a href="/funding-list.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">資金調達一覧</a>
+                <a href="/alliance-list.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">事業提携一覧</a>
             </nav>
         </div>
     </header>
@@ -41,34 +42,73 @@
     <footer class="bg-gray-900 text-gray-400 mt-16"><div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div></footer>
 
 <script type="module">
-const mainContent = document.getElementById('main-content');
-const functionUrl = "https://asia-northeast1-partnerflux.cloudfunctions.net/getNewsDetail";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
+
+const mainContent = document.getElementById('main-content');
+const loadingIndicator = document.getElementById('loading');
 const params = new URLSearchParams(window.location.search);
 const newsId = params.get('id');
+
+let db, firebaseConfig;
+
+try {
+    const env = import.meta.env;
+    if (!env || !env.VITE_FIREBASE_API_KEY) { throw new Error("Firebaseの環境変数が読み込めていません。");}
+    firebaseConfig = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID };
+    const app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    const auth = getAuth(app);
+    onAuthStateChanged(auth, (user) => {
+        if (user) { fetchNewsDetail(); } 
+        else { signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error)); }
+    });
+} catch(error) {
+    console.error(error);
+    mainContent.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+}
 
 async function fetchNewsDetail() {
     if (!newsId) { mainContent.innerHTML = `<p class="text-center text-red-500">記事IDが指定されていません。</p>`; return; }
     try {
-        const response = await fetch(`${functionUrl}?id=${newsId}`);
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`サーバーエラー: ${response.status} - ${errorText}`);
-        }
-        const news = await response.json();
+        const collectionPath = `artifacts/${firebaseConfig.projectId}/public/data/news`;
+        const docRef = doc(db, collectionPath, newsId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) { throw new Error('指定された記事が見つかりません。'); }
+        
+        const news = {id: docSnap.id, ...docSnap.data()};
         displayNews(news);
+
     } catch (error) {
         console.error("データ取得エラー:", error);
-        mainContent.innerHTML = `<p class="text-center text-red-500">データの読み込みに失敗しました。</p>`;
+        mainContent.innerHTML = `<p class="text-center text-red-500">データの読み込みに失敗しました: ${error.message}</p>`;
     }
 }
 
+function formatAnalysisText(text) {
+    if (!text) return '';
+    const sanitizer = document.createElement('div');
+    sanitizer.textContent = text;
+    const sanitizedText = sanitizer.innerHTML;
+    return sanitizedText.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold underline">$1</strong>');
+}
+
 function displayNews(news) {
+    loadingIndicator.style.display = 'none';
+
     const displayDate = (news.publicationDate && news.publicationDate !== '不明')
         ? news.publicationDate
-        : (news.registeredAt ? new Date(news.registeredAt).toLocaleDateString('ja-JP') : '日付不明');
+        : (news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
+    
+    const isFunding = news.category === 'funding';
+    let contentHtml = '';
 
-    const contentHtml = `
+    if (isFunding) {
+        // --- 資金調達用のHTML ---
+        contentHtml = `
         <div class="content-section rounded-xl shadow-xl overflow-hidden p-8 md:p-12">
             <div class="mb-8 pb-6 border-b border-gray-200">
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">${news.title || ''}</h1>
@@ -89,40 +129,51 @@ function displayNews(news) {
                 <div class="info-item"><span class="info-label">調達金額</span><p class="info-value">${news.fundingAmount || '不明'}</p></div>
                 <div class="info-item"><span class="info-label">リード投資家</span><p class="info-value">${news.leadInvestor || '不明'}</p></div>
             </div>
-            
-            <section class="mb-10 highlight-section">
-                <h3 class="text-xl font-semibold section-title mb-4">ハイライト</h3>
-                <div class="analysis-text space-y-3"><p>${news.summary || ''}</p></div>
-            </section>
-            
-            <section class="mb-10">
-                <h3 class="text-xl font-semibold section-title mb-4">VCによるグロース評価ポイント</h3>
-                <div class="analysis-text space-y-3"><p>${news.positiveAnalysis || ''}</p></div>
-            </section>
-            <section class="mb-10">
-                <h3 class="text-xl font-semibold section-title mb-4">VC視点のリスクアラート</h3>
-                <div class="analysis-text space-y-3"><p>${news.negativeAnalysis || ''}</p></div>
-            </section>
-            <section class="mb-6">
-                <h3 class="text-xl font-semibold section-title mb-4">VCが見るExitスコープ</h3>
-                <div class="analysis-text space-y-3"><p>${news.exitOutlook || ''}</p></div>
-            </section>
-
-            <!-- ★★★★★ 最下段のレイアウトを修正 ★★★★★ -->
-            <div class="mt-12">
-                <div class="text-right mb-4">
-                    ${news.originalUrl ? `<a href="${news.originalUrl}" target="_blank" rel="noopener noreferrer" class="text-sm text-gray-500 hover:text-gray-700 hover:underline">情報ソース: PR TIMES</a>` : ''}
-                </div>
-                <div class="text-center">
-                    <a href="/funding-list.html" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out">一覧へ戻る</a>
+            <!-- ★★★★★ コメントを正しい形式に修正 ★★★★★ -->
+            <section class="mb-10 highlight-section"><h3 class="text-xl font-semibold section-title mb-4">ハイライト</h3><div class="analysis-text">${formatAnalysisText(news.summary || '')}</div></section>
+            <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">VCによるグロース評価ポイント</h3><div class="analysis-text">${formatAnalysisText(news.positiveAnalysis || '')}</div></section>
+            <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">VC視点のリスクアラート</h3><div class="analysis-text">${formatAnalysisText(news.negativeAnalysis || '')}</div></section>
+            <section class="mb-6"><h3 class="text-xl font-semibold section-title mb-4">VCが見るExitスコープ</h3><div class="analysis-text">${formatAnalysisText(news.exitOutlook || '')}</div></section>
+        `;
+    } else {
+        // --- 事業提携用のHTML ---
+        contentHtml = `
+        <div class="content-section rounded-xl shadow-xl overflow-hidden p-8 md:p-12">
+            <div class="mb-8 pb-6 border-b border-gray-200">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">${news.title || ''}</h1>
+                <p class="text-md text-gray-500">発表日: ${displayDate}</p>
+            </div>
+            <div class="flex flex-col md:flex-row items-start md:items-center mb-10">
+                <div class="startup-icon-placeholder-large mr-0 md:mr-6 mb-4 md:mb-0 flex-shrink-0"><span>🤝</span></div>
+                 <div>
+                    <h2 class="text-2xl font-semibold text-gray-800">${news.primaryCompany || ''} × ${news.partnerCompany || ''}</h2>
+                    <p class="text-gray-600 mt-1">提携の種類: ${news.allianceType || '不明'}</p>
                 </div>
             </div>
-        </div>
+            <!-- ★★★★★ コメントを正しい形式に修正 ★★★★★ -->
+            <section class="mb-10 highlight-section"><h3 class="text-xl font-semibold section-title mb-4">提携のサマリ</h3><div class="analysis-text">${formatAnalysisText(news.summary || '')}</div></section>
+            <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">シナジー分析</h3><div class="analysis-text">${formatAnalysisText(news.synergyAnalysis || '')}</div></section>
+            <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">リスク分析</h3><div class="analysis-text">${formatAnalysisText(news.riskAnalysis || '')}</div></section>
+            <section class="mb-6"><h3 class="text-xl font-semibold section-title mb-4">将来の見立て</h3><div class="analysis-text">${formatAnalysisText(news.futureOutlook || '')}</div></section>
+        `;
+    }
+
+    // --- 共通のフッター部分 ---
+    const listPageUrl = isFunding ? '/funding-list.html' : '/alliance-list.html';
+    contentHtml += `
+            <div class="mt-12">
+                <div class="text-right mb-4">
+                    ${news.originalUrl ? `<a href="${news.originalUrl}" target="_blank" rel="noopener noreferrer" class="text-sm text-gray-500 hover:text-gray-700 hover:underline">出典: PR TIMES</a>` : ''}
+                </div>
+                <div class="text-center">
+                    <a href="${listPageUrl}" class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out">一覧へ戻る</a>
+                </div>
+            </div>
+        </div> 
     `;
+    
     mainContent.innerHTML = contentHtml;
 }
-
-fetchNewsDetail();
 </script>
 </body>
 </html>
