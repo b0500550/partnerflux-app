@@ -110,7 +110,6 @@
         </div>
     </div>
     
-    <!-- ★★★ 修正: 完全なHTML構造を持つモーダル ★★★ -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-content">
              <div class="modal-header">
@@ -183,6 +182,7 @@
         const bulkRejectButton = document.getElementById('bulk-reject-button');
         const selectionCounter = document.getElementById('selection-counter');
         const editModal = document.getElementById('editModal');
+        const editNewsForm = document.getElementById('editNewsForm');
         const confirmationModal = document.getElementById('confirmationModal');
 
         // State & Firebase variables
@@ -248,49 +248,33 @@
         })();
 
         // --- イベントリスナー設定 ---
-        fetchCandidatesButton.addEventListener('click', async () => {
-             const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
-             displayMessage(`${selectedCategory === 'funding' ? '資金調達' : '事業提携'}の候補ニュースを取得中です...`, false);
-             fetchCandidatesButton.disabled = true;
-             try {
-                const functionUrl = `${fetchCandidateNewsUrlBase}?category=${selectedCategory}`;
-                const response = await fetch(functionUrl);
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
-                displayMessage(result.message, false);
-                await fetchAndStoreCandidateNews();
-                renderFilteredLists();
-             } catch(error) {
-                displayMessage(`エラー: ${error.message}`, true);
-             } finally {
-                fetchCandidatesButton.disabled = false;
-             }
-        });
-
-        document.querySelectorAll('input[name="newsCategoryFilter"]').forEach(radio => {
-            radio.addEventListener('change', renderFilteredLists);
-        });
-
-        selectAllCandidatesCheckbox.addEventListener('change', (e) => {
-            document.querySelectorAll('.candidate-checkbox').forEach(checkbox => {
-                checkbox.checked = e.target.checked;
-            });
-            updateBulkActionUI();
-        });
-
-        candidateNewsListBody.addEventListener('change', (e) => {
-            if (e.target.classList.contains('candidate-checkbox')) {
-                // ★★★ 新規: デバッグ用ログ ★★★
-                console.log('Checkbox state changed, updating bulk action UI.');
-                updateBulkActionUI();
-            }
-        });
-
+        document.getElementById('addNewsForm').addEventListener('submit', handleManualAdd);
+        fetchCandidatesButton.addEventListener('click', handleFetchCandidates);
+        document.querySelectorAll('input[name="newsCategoryFilter"]').forEach(radio => radio.addEventListener('change', renderFilteredLists));
+        
+        // 候補ニュースのイベント
+        selectAllCandidatesCheckbox.addEventListener('change', handleSelectAll);
+        candidateNewsListBody.addEventListener('change', (e) => e.target.classList.contains('candidate-checkbox') && updateBulkActionUI());
+        candidateNewsListBody.addEventListener('click', handleCandidateActions);
         bulkAnalyzeButton.addEventListener('click', handleBulkAnalyze);
         bulkRejectButton.addEventListener('click', handleBulkReject);
 
+        // ★★★ 修正: 登録済みニュースのイベントリスナーを追加 ★★★
+        newsListBody.addEventListener('click', handleRegisteredNewsActions);
 
-        // --- データ取得・描画関数 ---
+        // ★★★ 修正: モーダル関連のイベントリスナーを復元 ★★★
+        document.getElementById('closeModalButton').addEventListener('click', () => editModal.style.display = 'none');
+        document.getElementById('confirmCancelButton').addEventListener('click', () => confirmationModal.style.display = 'none');
+        document.getElementById('confirmActionButton').addEventListener('click', () => {
+            if (onConfirmCallback) {
+                onConfirmCallback().catch(err => displayMessage(`操作に失敗しました: ${err.message}`, true));
+            }
+            confirmationModal.style.display = 'none';
+        });
+        editNewsForm.addEventListener('submit', handleEditFormSubmit);
+
+
+        // --- データ取得 & 描画 ---
         async function fetchAndStoreAllNews() {
             displayMessage("ニュースデータを読み込んでいます...", false);
             await Promise.all([ fetchAndStoreRegisteredNews(), fetchAndStoreCandidateNews() ]);
@@ -358,14 +342,89 @@
             candidateNewsListBody.insertAdjacentHTML('beforeend', row);
         }
 
-        // --- 一括操作ロジック ---
+        // --- イベントハンドラ ---
+
+        async function handleFetchCandidates() {
+             const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
+             displayMessage(`${selectedCategory === 'funding' ? '資金調達' : '事業提携'}の候補ニュースを取得中です...`, false);
+             fetchCandidatesButton.disabled = true;
+             try {
+                const functionUrl = `${fetchCandidateNewsUrlBase}?category=${selectedCategory}`;
+                const response = await fetch(functionUrl);
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
+                displayMessage(result.message, false);
+                await fetchAndStoreCandidateNews();
+                renderFilteredLists();
+             } catch(error) {
+                displayMessage(`エラー: ${error.message}`, true);
+             } finally {
+                fetchCandidatesButton.disabled = false;
+             }
+        }
+        
+        async function handleManualAdd(e) {
+            e.preventDefault();
+            const url = document.getElementById('newsUrl').value.trim();
+            const category = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
+            if (!url) return displayMessage("URLを入力してください。", true);
+
+            submitButton.disabled = true;
+            await analyzeAndRegisterNews(url, category)
+                .catch(err => console.error(err));
+            submitButton.disabled = false;
+            document.getElementById('newsUrl').value = '';
+        }
+
+        async function handleCandidateActions(event) {
+            const target = event.target;
+            if (!target.classList.contains('analyze-button') && !target.classList.contains('reject-button')) return;
+            
+            const { id, url, category, title } = target.dataset;
+
+            if (target.classList.contains('analyze-button')) {
+                target.disabled = true;
+                target.textContent = '処理中';
+                await analyzeAndRegisterNews(url, category, id).catch(err => console.error(err));
+            } else if (target.classList.contains('reject-button')) {
+                showConfirmationModal(`候補「${title}」を却下しますか？`, async () => {
+                    await deleteDoc(doc(db, candidateNewsCollectionPath, id));
+                    displayMessage("候補を却下しました。", false);
+                    await fetchAndStoreCandidateNews();
+                    renderFilteredLists();
+                });
+            }
+        }
+
+        // ★★★ 修正: 登録済みニュースのイベントハンドラを追加 ★★★
+        async function handleRegisteredNewsActions(event) {
+            const target = event.target;
+            if (!target.classList.contains('edit-button') && !target.classList.contains('delete-button')) return;
+
+            const { id, title } = target.dataset;
+
+            if (target.classList.contains('edit-button')) {
+                openEditModal(id);
+            } else if (target.classList.contains('delete-button')) {
+                showConfirmationModal(`記事「${title}」を本当に削除しますか？`, async () => {
+                    await deleteDoc(doc(db, newsCollectionPath, id));
+                    displayMessage("ニュースを削除しました。", false);
+                    await fetchAndStoreRegisteredNews();
+                    renderFilteredLists();
+                });
+            }
+        }
+
+        function handleSelectAll(e) {
+            document.querySelectorAll('.candidate-checkbox').forEach(checkbox => {
+                checkbox.checked = e.target.checked;
+            });
+            updateBulkActionUI();
+        }
+
         function updateBulkActionUI() {
             const selectedCheckboxes = document.querySelectorAll('.candidate-checkbox:checked');
             const selectedCount = selectedCheckboxes.length;
-
-            // ★★★ 新規: デバッグ用ログ ★★★
-            console.log(`Found ${selectedCount} selected checkboxes. Setting display to: ${selectedCount > 0 ? 'flex' : 'none'}`);
-
             if (selectedCount > 0) {
                 bulkActionContainer.style.display = 'flex';
                 selectionCounter.textContent = `${selectedCount}件選択中`;
@@ -374,14 +433,6 @@
             }
             const allCheckboxes = document.querySelectorAll('.candidate-checkbox');
             selectAllCandidatesCheckbox.checked = allCheckboxes.length > 0 && selectedCount === allCheckboxes.length;
-        }
-
-        function getSelectedCandidates() {
-            const selected = [];
-            document.querySelectorAll('.candidate-checkbox:checked').forEach(cb => {
-                selected.push(cb.dataset);
-            });
-            return selected;
         }
         
         async function handleBulkAnalyze() {
@@ -393,9 +444,7 @@
                 bulkAnalyzeButton.disabled = true;
                 bulkAnalyzeButton.textContent = '処理中...';
                 displayMessage(`${selected.length}件の一括処理を開始します...`, false);
-                let successCount = 0;
-                let errorCount = 0;
-
+                let successCount = 0, errorCount = 0;
                 for (const item of selected) {
                     try {
                         await analyzeAndRegisterNews(item.url, item.category, item.id);
@@ -406,7 +455,6 @@
                         displayMessage(`[${successCount + errorCount}/${selected.length}] 「${item.title}」の処理中にエラーが発生しました。`, true);
                     }
                 }
-                
                 displayMessage(`一括処理完了: ${successCount}件成功, ${errorCount}件失敗`, errorCount > 0);
                 await fetchAndStoreAllNews();
                 isBulkProcessing = false;
@@ -422,7 +470,6 @@
             showConfirmationModal(`${selected.length}件の候補を却下しますか？`, async () => {
                 const batch = writeBatch(db);
                 selected.forEach(item => batch.delete(doc(db, candidateNewsCollectionPath, item.id)));
-
                 try {
                     await batch.commit();
                     displayMessage(`${selected.length}件の候補を却下しました。`, false);
@@ -434,47 +481,9 @@
             });
         }
 
-        // --- 個別操作 & 共通関数 ---
-        document.getElementById('addNewsForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = document.getElementById('newsUrl').value.trim();
-            const category = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
-            if (!url) return displayMessage("URLを入力してください。", true);
-
-            submitButton.disabled = true;
-            await analyzeAndRegisterNews(url, category)
-                .catch(err => console.error(err));
-            submitButton.disabled = false;
-            document.getElementById('newsUrl').value = '';
-        });
-
-        candidateNewsListBody.addEventListener('click', async (event) => {
-            const target = event.target;
-            if (!target.classList.contains('analyze-button') && !target.classList.contains('reject-button')) return;
-            
-            const { id, url, category, title } = target.dataset;
-
-            if (target.classList.contains('analyze-button')) {
-                target.disabled = true;
-                target.textContent = '処理中';
-                await analyzeAndRegisterNews(url, category, id)
-                    .catch(err => console.error(err));
-            } else if (target.classList.contains('reject-button')) {
-                showConfirmationModal(`候補「${title}」を却下しますか？`, async () => {
-                    await deleteDoc(doc(db, candidateNewsCollectionPath, id));
-                    displayMessage("候補を却下しました。", false);
-                    await fetchAndStoreCandidateNews();
-                    renderFilteredLists();
-                });
-            }
-        });
-        
         async function analyzeAndRegisterNews(url, category, candidateId = null) {
             if (!userId) { throw new Error("ユーザー認証が完了していません。"); }
-            
-            const indicator = document.getElementById('processingIndicator');
-            indicator.style.display = 'block';
-
+            document.getElementById('processingIndicator').style.display = 'block';
             try {
                 const response = await fetch(processNewsUrl, {
                     method: 'POST',
@@ -483,24 +492,19 @@
                 });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.message || `サーバーエラー: ${response.status}`);
-                
                 if (!isBulkProcessing) {
                     displayMessage(`「${result.data.title}」を登録しました。`, false);
-                    if (candidateId) {
-                         await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
-                    }
+                    if (candidateId) await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
                     await fetchAndStoreAllNews(); 
                 } else if (candidateId) {
                     await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
                 }
             } catch (error) {
                 console.error("分析・登録処理エラー:", error);
-                if (!isBulkProcessing) {
-                    displayMessage(`エラー: ${error.message}`, true);
-                }
+                if (!isBulkProcessing) displayMessage(`エラー: ${error.message}`, true);
                 throw error;
             } finally {
-                indicator.style.display = 'none';
+                document.getElementById('processingIndicator').style.display = 'none';
             }
         }
         
@@ -510,25 +514,100 @@
              messageArea.style.display = 'block';
              messageArea.classList.add(isError ? 'message-error' : 'message-success');
         }
+
+        // --- モーダル関連の関数 ---
         function showConfirmationModal(message, callback) {
             onConfirmCallback = callback;
             confirmationModal.querySelector('#confirmationMessage').textContent = message;
             confirmationModal.style.display = 'flex';
         }
 
-        // Add event listeners for modal buttons
-        document.getElementById('closeModalButton')?.addEventListener('click', () => { editModal.style.display = 'none'; });
-        document.getElementById('confirmCancelButton')?.addEventListener('click', () => { confirmationModal.style.display = 'none'; });
-        document.getElementById('confirmActionButton')?.addEventListener('click', () => {
-            if (onConfirmCallback) {
-                onConfirmCallback().catch(err => displayMessage(`操作に失敗しました: ${err.message}`, true));
+        async function openEditModal(newsId) {
+            const docRef = doc(db, newsCollectionPath, newsId);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                displayMessage("編集対象のニュースが見つかりません。", true);
+                return;
             }
-            confirmationModal.style.display = 'none';
-        });
-        document.getElementById('editNewsForm')?.addEventListener('submit', (e) => {
-            // Placeholder for edit form submission logic
-            e.preventDefault();
-        });
+            const data = docSnap.data();
+            const category = data.category || 'funding';
+            
+            document.getElementById('editNewsId').value = newsId;
+            document.getElementById('editNewsCategory').value = category;
+
+            const fundingFields = document.getElementById('funding-fields');
+            const allianceFields = document.getElementById('alliance-fields');
+
+            if (category === 'alliance') {
+                fundingFields.style.display = 'none';
+                allianceFields.style.display = 'block';
+                document.getElementById('editAllianceTitle').value = data.title || '';
+                document.getElementById('editPrimaryCompany').value = data.primaryCompany || '';
+                document.getElementById('editPartnerCompany').value = data.partnerCompany || '';
+                document.getElementById('editAllianceType').value = data.allianceType || '';
+                document.getElementById('editAllianceSummary').value = data.summary || '';
+                document.getElementById('editSynergyAnalysis').value = data.synergyAnalysis || '';
+                document.getElementById('editRiskAnalysis').value = data.riskAnalysis || '';
+                document.getElementById('editFutureOutlook').value = data.futureOutlook || '';
+            } else {
+                allianceFields.style.display = 'none';
+                fundingFields.style.display = 'block';
+                document.getElementById('editTitle').value = data.title || '';
+                document.getElementById('editStartupName').value = data.startupName || '';
+                document.getElementById('editBusinessDescription').value = data.businessDescription || '';
+                document.getElementById('editRound').value = data.round || '';
+                document.getElementById('editFundingAmount').value = data.fundingAmount || '';
+                document.getElementById('editLeadInvestor').value = data.leadInvestor || '';
+                document.getElementById('editSummary').value = data.summary || '';
+                document.getElementById('editPositiveAnalysis').value = data.positiveAnalysis || '';
+                document.getElementById('editNegativeAnalysis').value = data.negativeAnalysis || '';
+                document.getElementById('editExitOutlook').value = data.exitOutlook || '';
+            }
+            editModal.style.display = 'flex';
+        }
+
+        async function handleEditFormSubmit(event) {
+            event.preventDefault();
+            const newsId = document.getElementById('editNewsId').value;
+            const category = document.getElementById('editNewsCategory').value;
+            let updatedData = {};
+
+            if (category === 'alliance') {
+                updatedData = {
+                    title: document.getElementById('editAllianceTitle').value,
+                    primaryCompany: document.getElementById('editPrimaryCompany').value,
+                    partnerCompany: document.getElementById('editPartnerCompany').value,
+                    allianceType: document.getElementById('editAllianceType').value,
+                    summary: document.getElementById('editAllianceSummary').value,
+                    synergyAnalysis: document.getElementById('editSynergyAnalysis').value,
+                    riskAnalysis: document.getElementById('editRiskAnalysis').value,
+                    futureOutlook: document.getElementById('editFutureOutlook').value,
+                };
+            } else {
+                updatedData = {
+                    title: document.getElementById('editTitle').value,
+                    startupName: document.getElementById('editStartupName').value,
+                    businessDescription: document.getElementById('editBusinessDescription').value,
+                    round: document.getElementById('editRound').value,
+                    fundingAmount: document.getElementById('editFundingAmount').value,
+                    leadInvestor: document.getElementById('editLeadInvestor').value,
+                    summary: document.getElementById('editSummary').value,
+                    positiveAnalysis: document.getElementById('editPositiveAnalysis').value,
+                    negativeAnalysis: document.getElementById('editNegativeAnalysis').value,
+                    exitOutlook: document.getElementById('editExitOutlook').value,
+                };
+            }
+            try {
+                const docRef = doc(db, newsCollectionPath, newsId);
+                await updateDoc(docRef, updatedData);
+                displayMessage("ニュース情報を更新しました。", false);
+                editModal.style.display = 'none';
+                await fetchAndStoreRegisteredNews();
+                renderFilteredLists();
+            } catch (error) {
+                displayMessage("更新に失敗しました。", true);
+            }
+        }
 
     </script>
 </body>
