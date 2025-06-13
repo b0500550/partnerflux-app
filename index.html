@@ -39,7 +39,6 @@
             </div>
         </section>
 
-        <!-- ★★★★★ STEP 5-1: 事業提携ボタンを有効化 ★★★★★ -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
             <a href="/funding-list.html" class="nav-button p-6 rounded-lg shadow-md text-center transition-transform transform hover:scale-105 duration-300 ease-in-out flex flex-col items-center justify-center h-48">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-12 w-12 mb-3"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -90,35 +89,62 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const newsContainer = document.getElementById('recent-news-body');
 
+// ★★★ 修正: admin.htmlと共通の初期化処理 ★★★
 try {
-    const env = import.meta.env;
-    if (!env || !env.VITE_FIREBASE_API_KEY) { throw new Error("Firebaseの環境変数が読み込めていません。"); }
-    const firebaseConfig = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID };
+    let firebaseConfig;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'partnerflux';
+
+    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        firebaseConfig = JSON.parse(__firebase_config);
+    } 
+    else if (import.meta.env && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+        firebaseConfig = { 
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+            appId: import.meta.env.VITE_FIREBASE_APP_ID,
+        };
+    } 
+    else {
+        throw new Error("Firebaseのバックエンド設定を読み込めませんでした。");
+    }
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
-
+    
     onAuthStateChanged(auth, (user) => {
-        if (user) { fetchRecentNews(db, firebaseConfig.projectId); } 
-        else { signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error)); }
+        if (user) {
+            fetchRecentNews(db, appId);
+        } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err));
+        } else {
+            signInAnonymously(auth).catch(err => console.error(err));
+        }
     });
+
 } catch (error) {
     console.error(error);
     newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-red-500">${error.message}</td></tr>`;
 }
 
-async function fetchRecentNews(db, projectId) {
+async function fetchRecentNews(db, appId) {
     try {
-        const newsCollectionPath = `artifacts/${projectId}/public/data/news`;
-        const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"), limit(5)); // 表示件数を5件に
+        const newsCollectionPath = `artifacts/${appId}/public/data/news`;
+        const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"), limit(5));
         const querySnapshot = await getDocs(q);
 
         newsContainer.innerHTML = ''; 
-        if (querySnapshot.empty) { newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-gray-500">登録されているニュースがありません。</td></tr>`; return; }
+        if (querySnapshot.empty) { 
+            newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-gray-500">登録されているニュースがありません。</td></tr>`;
+            return;
+        }
 
         querySnapshot.forEach((doc) => {
             const newsItem = { id: doc.id, ...doc.data() };
@@ -126,7 +152,6 @@ async function fetchRecentNews(db, projectId) {
                 ? newsItem.publicationDate
                 : (newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
             
-            // ★★★★★ STEP 5-2: カテゴリ表示用のタグを生成 ★★★★★
             let categoryTag = '';
             if (newsItem.category === 'funding') {
                 categoryTag = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-sky-100 text-sky-700">#資金調達</span>`;

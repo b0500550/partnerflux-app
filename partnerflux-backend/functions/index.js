@@ -64,7 +64,8 @@ const fundingPrompt = `あなたは、シリコンバレーで名を馳せるト
 
 
 /**
- * PR TIMESの検索結果から直接ニュース候補を取得する、シンプルで堅牢な最終完成版
+ * ★★ロジック大幅改善版★★
+ * PR TIMESの検索結果を一次ソースとしつつ、各記事ページを個別訪問して「公式キーワード」を検証する、高精度な候補取得関数
  */
 exports.fetchCandidateNews = functions
     .runWith({timeoutSeconds: 540, memory: "1GB"})
@@ -79,8 +80,22 @@ exports.fetchCandidateNews = functions
         if (!requestedCategory || !['funding', 'alliance'].includes(requestedCategory)) {
             return res.status(400).json({ message: "無効なカテゴリが指定されました。'funding' または 'alliance' を指定してください。" });
         }
-        functions.logger.info(`ニュース候補の取得処理を開始します (カテゴリ: ${requestedCategory}, モード: 検索結果直接取得)...`);
+        
+        // ★★★ 変更点: カテゴリごとに検証すべき「公式キーワード」を定義 ★★★
+        const keywordsConfig = {
+            funding: {
+                search: "資金調達", // 検索に使う単語
+                verify: ["資金調達"] // 検証に使う公式キーワード（完全一致）
+            },
+            alliance: {
+                search: "業務提携",
+                verify: ["業務提携", "資本業務提携", "協業", "連携"] // 提携関連は複数パターンを許容
+            },
+        };
 
+        const config = keywordsConfig[requestedCategory];
+        functions.logger.info(`ニュース候補の取得処理を開始します (カテゴリ: ${requestedCategory}, 検索キーワード: "${config.search}")`);
+        
         try {
           const projectId = JSON.parse(process.env.FIREBASE_CONFIG).projectId;
           const newsCollection = db.collection(`artifacts/${projectId}/public/data/news`);
@@ -95,53 +110,72 @@ exports.fetchCandidateNews = functions
           newsSnapshot.forEach((doc) => existingUrls.add(doc.data().originalUrl));
           candidateSnapshot.forEach((doc) => existingUrls.add(doc.data().url));
           functions.logger.info(`既存のURLを ${existingUrls.size} 件確認しました。`);
-
-          const keywordsToSearch = {
-            funding: ["資金調達"],
-            alliance: ["業務提携", "資本業務提携", "協業", "買収", "M&A"],
-          };
           
           const uniqueNewArticles = new Map();
-
-          // ★★★★★ 核心のロジック: カテゴリに応じたキーワードで直接検索し、結果を信頼する ★★★★★
-          for (const keyword of keywordsToSearch[requestedCategory]) {
-            const searchUrl = `https://prtimes.jp/main/action.php?run=html&page=searchkey&search_word=${encodeURIComponent(keyword)}`;
-            functions.logger.info(`キーワード「${keyword}」で検索します: ${searchUrl}`);
-
-            try {
-                const listPageResponse = await axios.get(searchUrl, {
-                    headers: {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"},
-                });
-                
-                const $list = cheerio.load(listPageResponse.data);
-                const jsonDataText = $list('script#__NEXT_DATA__[type="application/json"]').html();
-                
-                if (!jsonDataText) {
-                    functions.logger.warn(`キーワード「${keyword}」の検索結果でJSONデータが見つかりませんでした。`);
-                    continue;
-                }
-                
+          
+          // --- STEP 1: キーワードで検索し、候補となる記事リストを取得 ---
+          const searchUrl = `https://prtimes.jp/main/action.php?run=html&page=searchkey&search_word=${encodeURIComponent(config.search)}`;
+          functions.logger.info(`一次スクリーニングを開始します: ${searchUrl}`);
+          
+          let articlesFromSearch = [];
+          try {
+            const listPageResponse = await axios.get(searchUrl, {
+                headers: {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"},
+            });
+            const $list = cheerio.load(listPageResponse.data);
+            const jsonDataText = $list('script#__NEXT_DATA__[type="application/json"]').html();
+            
+            if (jsonDataText) {
                 const pageData = JSON.parse(jsonDataText);
-                const articles = pageData?.props?.pageProps?.dehydratedState?.queries?.[0]?.state?.data?.pages?.[0]?.releaseList || [];
-                functions.logger.info(`「${keyword}」の検索結果から ${articles.length} 件の記事リストを抽出しました。`);
-
-                for (const article of articles) {
-                    if (!article.releaseUrl || !article.title) continue;
-                    
-                    const fullUrl = `https://prtimes.jp${article.releaseUrl}`;
-                    if (existingUrls.has(fullUrl) || uniqueNewArticles.has(fullUrl)) continue;
-
-                    uniqueNewArticles.set(fullUrl, {
-                        title: article.title,
-                        url: fullUrl,
-                        category: requestedCategory,
-                    });
-                }
-            } catch (searchError) {
-                functions.logger.error(`キーワード「${keyword}」での検索中にエラーが発生しました。`, searchError.message);
+                articlesFromSearch = pageData?.props?.pageProps?.dehydratedState?.queries?.[0]?.state?.data?.pages?.[0]?.releaseList || [];
+                functions.logger.info(`一次スクリーニング: ${articlesFromSearch.length} 件の記事を抽出しました。`);
+            } else {
+                functions.logger.warn(`検索結果でJSONデータが見つかりませんでした。`);
             }
+          } catch(searchError){
+             functions.logger.error(`検索ページの取得でエラー: ${searchUrl}`, searchError.message);
           }
 
+
+          // --- STEP 2: 各記事ページを個別に検証し、公式キーワードを持つものだけを抽出 ---
+          functions.logger.info(`二次検証（個別記事チェック）を開始します...`);
+          for (const article of articlesFromSearch) {
+              if (!article.releaseUrl || !article.title) continue;
+              
+              const fullUrl = `https://prtimes.jp${article.releaseUrl}`;
+              if (existingUrls.has(fullUrl) || uniqueNewArticles.has(fullUrl)) continue;
+
+              try {
+                  const articlePageResponse = await axios.get(fullUrl, { timeout: 10000 });
+                  const $$ = cheerio.load(articlePageResponse.data);
+
+                  let hasOfficialKeyword = false;
+                  // 'キーワード'という見出し(dt)を探し、その隣のdd要素内のaタグ(キーワードリンク)をチェック
+                  $$('dt:contains("キーワード")').next('dd').find('a').each((i, elem) => {
+                      const keywordText = $$(elem).text().trim();
+                      if (config.verify.includes(keywordText)) { // ★検証キーワードのいずれかに一致すればOK
+                          hasOfficialKeyword = true;
+                          return false; // ループを抜ける
+                      }
+                  });
+
+                  if (hasOfficialKeyword) {
+                      functions.logger.info(`✅ [検証OK] ${fullUrl}`);
+                      uniqueNewArticles.set(fullUrl, {
+                          title: article.title,
+                          url: fullUrl,
+                          category: requestedCategory,
+                      });
+                  } else {
+                      functions.logger.info(`❌ [検証NG] 公式キーワード不一致: ${fullUrl}`);
+                  }
+              } catch (verifyError) {
+                  functions.logger.error(`記事ページの検証エラー: ${fullUrl}`, verifyError.message);
+              }
+          }
+
+
+          // --- STEP 3: 検証済みの記事をDBに保存 ---
           if (uniqueNewArticles.size > 0) {
             const batch = db.batch();
             uniqueNewArticles.forEach((article) => {
@@ -161,6 +195,7 @@ exports.fetchCandidateNews = functions
             const message = "新しいニュース候補は見つかりませんでした。";
             return res.status(200).json({message: message, count: 0});
           }
+
         } catch (error) {
           functions.logger.error("ニュース候補の取得処理中に重大なエラーが発生しました:", error);
           const errorMessage = error.response ? `外部サイトへのアクセスエラー(ステータス: ${error.response.status})` : error.message;

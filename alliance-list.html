@@ -27,7 +27,6 @@
         </div>
     </header>
 
-    <!-- ★★★★★ 見出しとアイコンを変更 ★★★★★ -->
     <section class="page-title-section py-12">
         <div class="container mx-auto px-6 text-center">
             <div class="flex items-center justify-center mb-4">
@@ -50,35 +49,58 @@
     <footer class="bg-gray-900 text-gray-400 mt-16"><div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div></footer>
 
 <script type="module">
-// ★★★★★ where をインポートに追加 ★★★★★
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, query, getDocs, orderBy, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
 const newsListContainer = document.getElementById('news-list-container');
 const loadingIndicator = document.getElementById('loading');
 
+// ★★★ 修正: admin.htmlと共通の初期化処理 ★★★
 try {
-    const env = import.meta.env;
-    if (!env || !env.VITE_FIREBASE_API_KEY) { throw new Error("Firebaseの環境変数が読み込めていません。");}
-    const firebaseConfig = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID };
+    let firebaseConfig;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'partnerflux';
+
+    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        firebaseConfig = JSON.parse(__firebase_config);
+    } 
+    else if (import.meta.env && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+        firebaseConfig = { 
+            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+            appId: import.meta.env.VITE_FIREBASE_APP_ID,
+        };
+    } 
+    else {
+        throw new Error("Firebaseのバックエンド設定を読み込めませんでした。");
+    }
+
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
+    
     onAuthStateChanged(auth, (user) => {
-        if (user) { fetchNews(db, firebaseConfig.projectId); } 
-        else { signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed", error)); }
+        if (user) {
+            fetchNews(db, appId);
+        } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err));
+        } else {
+            signInAnonymously(auth).catch(err => console.error(err));
+        }
     });
+
 } catch(error) {
     console.error(error);
     loadingIndicator.style.display = 'none';
     newsListContainer.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
 }
 
-async function fetchNews(db, projectId) {
-    const newsCollectionPath = `artifacts/${projectId}/public/data/news`;
+async function fetchNews(db, appId) {
+    const newsCollectionPath = `artifacts/${appId}/public/data/news`;
     try {
-        // ★★★★★ Firestoreのクエリに category === 'alliance' の条件を追加 ★★★★★
         const q = query(
             collection(db, newsCollectionPath), 
             where("category", "==", "alliance"), 
@@ -90,14 +112,16 @@ async function fetchNews(db, projectId) {
 
         if (loadingIndicator) loadingIndicator.style.display = 'none';
         newsListContainer.innerHTML = ''; 
-        if (newsList.length === 0) { newsListContainer.innerHTML = `<p class="text-center text-gray-500">登録されている事業提携ニュースがありません。</p>`; return; }
+        if (newsList.length === 0) {
+             newsListContainer.innerHTML = `<p class="text-center text-gray-500">登録されている事業提携ニュースがありません。</p>`;
+             return;
+        }
 
         newsList.forEach((newsItem) => {
             const displayDate = (newsItem.publicationDate && newsItem.publicationDate !== '不明')
                 ? newsItem.publicationDate
                 : (newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
             
-            // ★★★★★ カードに表示する企業名を primaryCompany と partnerCompany に変更 ★★★★★
             const companyNames = `${newsItem.primaryCompany || '企業A'} × ${newsItem.partnerCompany || '企業B'}`;
 
             const newsCardHtml = `
