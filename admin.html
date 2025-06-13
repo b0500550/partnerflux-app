@@ -7,48 +7,51 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #e9ecef; }
-        .admin-container { max-width: 800px; margin: 40px auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .admin-header { border-bottom: 1px solid #dee2e6; padding-bottom: 15px; margin-bottom: 25px; }
-        .admin-title { font-size: 1.75rem; font-weight: 600; color: #343a40; }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
+        .admin-container { max-width: 1000px; margin: 40px auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .section-container { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e5e7eb;}
+        .section-title { font-size: 1.5rem; font-weight: 600; color: #343a40; margin-bottom: 1.5rem; }
         .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: #495057; }
-        .form-input, .edit-form-textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; margin-bottom: 15px; }
-        .form-button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: background-color 0.2s; }
-        .form-button:hover { background-color: #0056b3; }
-        .form-button:disabled { background-color: #6c757d; cursor: not-allowed; }
-        .message-area { margin-top: 20px; padding: 10px; border-radius: 4px; text-align: center; }
+        .form-input, .edit-form-textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; margin-bottom: 15px; transition: border-color 0.2s, box-shadow 0.2s; }
+        .form-input:focus, .edit-form-textarea:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); outline: none;}
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: all 0.2s; font-weight: 500; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:hover { background-color: #0056b3; }
+        .btn-primary:disabled { background-color: #6c757d; cursor: not-allowed; opacity: 0.7; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-secondary:hover { background-color: #5a6268; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-success:hover { background-color: #218838; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-danger:hover { background-color: #c82333; }
+        .btn-sm { padding: 5px 10px; font-size: 0.875rem; }
+        .message-area { margin-top: 20px; padding: 12px; border-radius: 4px; text-align: center; display: none; }
         .message-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .message-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .processing-indicator { display: none; margin-top: 10px; color: #007bff; }
-        .news-table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
-        .news-table th, .news-table td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
-        .news-table th { background-color: #f8f9fa; }
-        .edit-button { background-color: #28a745; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-right: 5px; }
-        .edit-button:hover { background-color: #218838; }
-        .delete-button { background-color: #dc3545; color: white; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-        .delete-button:hover { background-color: #c82333; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background-color: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; }
+        .custom-table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+        .custom-table th, .custom-table td { padding: 12px 15px; border: 1px solid #dee2e6; text-align: left; vertical-align: middle; }
+        .custom-table th { background-color: #f8f9fa; font-weight: 600; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background-color: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #dee2e6; padding-bottom: 1rem; margin-bottom: 1rem; }
         .modal-title { font-size: 1.5rem; font-weight: 600; }
         .close-button { font-size: 1.5rem; cursor: pointer; border: none; background: none; }
-        .edit-form-textarea { min-height: 120px; }
-        /* ★★★★★ カテゴリ選択用のスタイルを追加 ★★★★★ */
-        .category-selection { margin-bottom: 1.5rem; }
         .category-selection legend { font-weight: 500; color: #495057; margin-bottom: 0.75rem; font-size:1rem; }
         .category-selection div { display: flex; gap: 1rem; }
         .category-selection label { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
         .category-selection input[type="radio"] { display: none; }
-        .category-selection input[type="radio"]:checked + label { background-color: #007bff; color: white; border-color: #007bff; }
+        .category-selection input[type="radio"]:checked + label { background-color: #007bff; color: white; border-color: #007bff; box-shadow: 0 0 5px rgba(0,123,255,0.5); }
     </style>
 </head>
 <body>
     <div class="admin-container">
-        <div class="admin-header"><h1 class="admin-title">PartnerFlux - ニュース記事登録</h1></div>
-        <div>
+        <h1 class="section-title" style="font-size: 2rem; border-bottom: 1px solid #dee2e6; padding-bottom: 1rem;">PartnerFlux 管理ページ</h1>
+        
+        <div id="manual-add-section">
+            <h2 class="section-title">手動ニュース登録</h2>
             <form id="addNewsForm">
-                <!-- ★★★★★ STEP 2-1: カテゴリ選択UIの追加 ★★★★★ -->
-                <fieldset class="category-selection">
+                <fieldset class="category-selection mb-6">
                     <legend class="form-label">ニュースカテゴリ:</legend>
                     <div>
                         <input type="radio" id="category-funding" name="newsCategory" value="funding" checked>
@@ -57,46 +60,50 @@
                         <label for="category-alliance">事業提携</label>
                     </div>
                 </fieldset>
-
                 <div>
                     <label for="newsUrl" class="form-label">ニュース記事URL:</label>
                     <input type="url" id="newsUrl" name="newsUrl" class="form-input" placeholder="https://example.com/news/article" required>
                 </div>
-                <button type="submit" id="submitButton" class="form-button">記事を登録・分析</button>
+                <button type="submit" id="submitButton" class="btn btn-primary">記事を登録・分析</button>
                 <div id="processingIndicator" class="processing-indicator">処理中... しばらくお待ちください。</div>
             </form>
         </div>
-        <div id="messageArea" class="message-area" style="display: none;"></div>
+        <div id="messageArea" class="message-area"></div>
 
-        <div class="mt-8 pt-6 border-t border-gray-200">
-            <h2 class="text-xl font-semibold text-gray-700 mb-4">登録済みニュース一覧</h2>
+        <div class="section-container">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="section-title !mb-0">候補ニュース一覧</h2>
+                <button id="fetchCandidatesButton" class="btn btn-secondary">候補を更新</button>
+            </div>
             <div class="overflow-x-auto">
-                <table class="news-table">
-                    <thead>
-                        <tr>
-                            <th>登録日</th>
-                            <th>カテゴリ</th>
-                            <th>タイトル</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
+                <table class="custom-table">
+                    <thead><tr><th>発見日</th><th>カテゴリ</th><th>タイトル</th><th class="w-1/4">操作</th></tr></thead>
+                    <tbody id="candidate-news-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-container">
+            <h2 class="section-title">登録済みニュース一覧</h2>
+            <div class="overflow-x-auto">
+                <table class="custom-table">
+                    <thead><tr><th>登録日</th><th>カテゴリ</th><th>タイトル</th><th class="w-1/4">操作</th></tr></thead>
                     <tbody id="news-list-body"></tbody>
                 </table>
             </div>
         </div>
     </div>
-
-    <!-- ★★★★★ STEP 2-2: 編集モーダルの構造変更 ★★★★★ -->
+    
+    <!-- 編集モーダル -->
     <div id="editModal" class="modal-overlay">
         <div class="modal-content">
-            <div class="modal-header">
+             <div class="modal-header">
                 <h2 class="modal-title">ニュース情報の編集</h2>
                 <button id="closeModalButton" class="close-button">&times;</button>
             </div>
             <form id="editNewsForm">
                 <input type="hidden" id="editNewsId">
                 <input type="hidden" id="editNewsCategory">
-
                 <!-- 資金調達用の入力欄 -->
                 <div id="funding-fields" style="display: none;">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -114,7 +121,6 @@
                     <div><label for="editNegativeAnalysis" class="form-label">ネガティブ分析</label><textarea id="editNegativeAnalysis" class="edit-form-textarea"></textarea></div>
                     <div><label for="editExitOutlook" class="form-label">Exitの見立て</label><textarea id="editExitOutlook" class="edit-form-textarea"></textarea></div>
                 </div>
-
                 <!-- 事業提携用の入力欄 -->
                 <div id="alliance-fields" style="display: none;">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -130,264 +136,358 @@
                     <div><label for="editRiskAnalysis" class="form-label">リスク分析</label><textarea id="editRiskAnalysis" class="edit-form-textarea"></textarea></div>
                     <div><label for="editFutureOutlook" class="form-label">将来の見立て</label><textarea id="editFutureOutlook" class="edit-form-textarea"></textarea></div>
                 </div>
-
-                <div class="text-right mt-4">
-                    <button type="submit" class="form-button">変更を保存</button>
-                </div>
+                <div class="text-right mt-4"><button type="submit" class="btn btn-primary">変更を保存</button></div>
             </form>
         </div>
     </div>
+    
+    <!-- 確認モーダル -->
+    <div id="confirmationModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3 id="confirmationMessage" class="text-lg font-medium mb-6"></h3>
+            <div class="flex justify-end gap-4">
+                <button id="confirmCancelButton" class="btn btn-secondary">キャンセル</button>
+                <button id="confirmActionButton" class="btn btn-danger">実行</button>
+            </div>
+        </div>
+    </div>
+
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, orderBy, doc, deleteDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // DOM要素の取得
         const messageArea = document.getElementById('messageArea');
         const submitButton = document.getElementById('submitButton');
+        const fetchCandidatesButton = document.getElementById('fetchCandidatesButton');
         const newsListBody = document.getElementById('news-list-body');
+        const candidateNewsListBody = document.getElementById('candidate-news-list-body');
         const editModal = document.getElementById('editModal');
         const closeModalButton = document.getElementById('closeModalButton');
         const editNewsForm = document.getElementById('editNewsForm');
-        
+        const confirmationModal = document.getElementById('confirmationModal');
+        let onConfirmCallback = null;
+
+        let auth, userId, db, newsCollectionPath, candidateNewsCollectionPath, processNewsUrl, fetchCandidateNewsUrlBase;
+
         submitButton.disabled = true;
+        fetchCandidatesButton.disabled = true;
 
         try {
-            const env = import.meta.env;
-            if (!env || !env.VITE_FIREBASE_API_KEY) { throw new Error("Firebaseの環境変数が読み込めていません。"); }
-            const firebaseConfig = { apiKey: env.VITE_FIREBASE_API_KEY, authDomain: env.VITE_FIREBASE_AUTH_DOMAIN, projectId: env.VITE_FIREBASE_PROJECT_ID, storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET, messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID, appId: env.VITE_FIREBASE_APP_ID, };
+            let firebaseConfig, projectId;
+            let isLocalEnv = false;
 
-            let auth, userId = null, db;
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                 firebaseConfig = JSON.parse(__firebase_config);
+                 projectId = firebaseConfig.projectId;
+            } else if (import.meta.env && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
+                isLocalEnv = true;
+                firebaseConfig = { 
+                    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+                    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+                    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+                    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+                    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+                    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+                };
+                projectId = firebaseConfig.projectId;
+            } else {
+                throw new Error("Firebaseのバックエンド設定を読み込めませんでした。");
+            }
+
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
-
+            
+            newsCollectionPath = 'artifacts/partnerflux/public/data/news';
+            candidateNewsCollectionPath = 'artifacts/partnerflux/public/data/candidate_news';
+            
+            processNewsUrl = `https://asia-northeast1-${projectId}.cloudfunctions.net/processNewsUrl`;
+            fetchCandidateNewsUrlBase = `https://asia-northeast1-${projectId}.cloudfunctions.net/fetchCandidateNews`;
+            
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     userId = user.uid;
                     submitButton.disabled = false;
-                    fetchAndDisplayNews();
+                    fetchCandidatesButton.disabled = false;
+                    fetchAndDisplayAllNews();
                 } else {
-                    await signInAnonymously(auth).catch(err => displayMessage("認証に失敗しました。", true));
-                }
-            });
-            
-            const newsCollectionPath = `artifacts/${firebaseConfig.projectId}/public/data/news`;
-
-            async function fetchAndDisplayNews() {
-                newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">ニュースを読み込んでいます...</td></tr>`;
-                try {
-                    const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"));
-                    const querySnapshot = await getDocs(q);
-
-                    newsListBody.innerHTML = ''; 
-                    if (querySnapshot.empty) {
-                        newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">登録済みのニュースはありません。</td></tr>`;
-                        return;
+                    if (!isLocalEnv && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
                     }
-
-                    querySnapshot.forEach(doc => {
-                        const news = doc.data();
-                        const date = news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
-                        // ★★★★★ カテゴリ表示を日本語に ★★★★★
-                        const categoryText = news.category === 'funding' ? '資金調達' : (news.category === 'alliance' ? '事業提携' : 'その他');
-                        const row = `
-                            <tr>
-                                <td>${date}</td>
-                                <td><span class="px-2 py-1 text-xs font-semibold rounded-full ${news.category === 'funding' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700'}">${categoryText}</span></td>
-                                <td>${news.title || '(タイトルなし)'}</td>
-                                <td class="whitespace-nowrap">
-                                    <button class="edit-button" data-id="${doc.id}">編集</button>
-                                    <button class="delete-button" data-id="${doc.id}">削除</button>
-                                </td>
-                            </tr>
-                        `;
-                        newsListBody.insertAdjacentHTML('beforeend', row);
-                    });
-                } catch (error) {
-                    console.error("ニュース一覧の取得に失敗しました:", error);
-                    newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-red-500">一覧の読み込みに失敗しました。</td></tr>`;
-                }
-            }
-
-            // ★★★★★ STEP 2-3: 編集モーダルの表示ロジックを更新 ★★★★★
-            newsListBody.addEventListener('click', async (event) => {
-                const target = event.target;
-                const newsId = target.dataset.id;
-
-                if (target.classList.contains('edit-button')) {
-                    const docRef = doc(db, newsCollectionPath, newsId);
-                    const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        const data = docSnap.data();
-                        const category = data.category || 'funding'; // デフォルトはfunding
-                        
-                        document.getElementById('editNewsId').value = newsId;
-                        document.getElementById('editNewsCategory').value = category;
-
-                        const fundingFields = document.getElementById('funding-fields');
-                        const allianceFields = document.getElementById('alliance-fields');
-
-                        // カテゴリに応じて表示を切り替える
-                        if (category === 'alliance') {
-                            fundingFields.style.display = 'none';
-                            allianceFields.style.display = 'block';
-
-                            // 事業提携データをフォームに設定
-                            document.getElementById('editAllianceTitle').value = data.title || '';
-                            document.getElementById('editPrimaryCompany').value = data.primaryCompany || '';
-                            document.getElementById('editPartnerCompany').value = data.partnerCompany || '';
-                            document.getElementById('editAllianceType').value = data.allianceType || '';
-                            document.getElementById('editAllianceSummary').value = data.summary || '';
-                            document.getElementById('editSynergyAnalysis').value = data.synergyAnalysis || '';
-                            document.getElementById('editRiskAnalysis').value = data.riskAnalysis || '';
-                            document.getElementById('editFutureOutlook').value = data.futureOutlook || '';
-
-                        } else { // funding or unknown
-                            allianceFields.style.display = 'none';
-                            fundingFields.style.display = 'block';
-
-                            // 資金調達データをフォームに設定
-                            document.getElementById('editTitle').value = data.title || '';
-                            document.getElementById('editStartupName').value = data.startupName || '';
-                            document.getElementById('editBusinessDescription').value = data.businessDescription || '';
-                            document.getElementById('editRound').value = data.round || '';
-                            document.getElementById('editFundingAmount').value = data.fundingAmount || '';
-                            document.getElementById('editLeadInvestor').value = data.leadInvestor || '';
-                            document.getElementById('editSummary').value = data.summary || '';
-                            document.getElementById('editPositiveAnalysis').value = data.positiveAnalysis || '';
-                            document.getElementById('editNegativeAnalysis').value = data.negativeAnalysis || '';
-                            document.getElementById('editExitOutlook').value = data.exitOutlook || '';
-                        }
-                        editModal.style.display = 'flex';
-                    }
-                }
-                
-                if (target.classList.contains('delete-button')) {
-                    if (confirm(`この記事を本当に削除しますか？この操作は元に戻せません。`)) {
-                        try {
-                            await deleteDoc(doc(db, newsCollectionPath, newsId));
-                            displayMessage("ニュースを削除しました。", false);
-                            fetchAndDisplayNews();
-                        } catch (error) {
-                            console.error("削除中にエラーが発生しました:", error);
-                            displayMessage("削除に失敗しました。", true);
-                        }
-                    }
-                }
-            });
-
-            closeModalButton.addEventListener('click', () => { editModal.style.display = 'none'; });
-            editModal.addEventListener('click', (event) => { if (event.target === editModal) { editModal.style.display = 'none'; } });
-            
-            // ★★★★★ STEP 2-4: 編集内容の保存ロジックを更新 ★★★★★
-            editNewsForm.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                const newsId = document.getElementById('editNewsId').value;
-                const category = document.getElementById('editNewsCategory').value;
-                
-                let updatedData = {};
-
-                if (category === 'alliance') {
-                    updatedData = {
-                        title: document.getElementById('editAllianceTitle').value,
-                        primaryCompany: document.getElementById('editPrimaryCompany').value,
-                        partnerCompany: document.getElementById('editPartnerCompany').value,
-                        allianceType: document.getElementById('editAllianceType').value,
-                        summary: document.getElementById('editAllianceSummary').value,
-                        synergyAnalysis: document.getElementById('editSynergyAnalysis').value,
-                        riskAnalysis: document.getElementById('editRiskAnalysis').value,
-                        futureOutlook: document.getElementById('editFutureOutlook').value,
-                    };
-                } else {
-                    updatedData = {
-                        title: document.getElementById('editTitle').value,
-                        startupName: document.getElementById('editStartupName').value,
-                        businessDescription: document.getElementById('editBusinessDescription').value,
-                        round: document.getElementById('editRound').value,
-                        fundingAmount: document.getElementById('editFundingAmount').value,
-                        leadInvestor: document.getElementById('editLeadInvestor').value,
-                        summary: document.getElementById('editSummary').value,
-                        positiveAnalysis: document.getElementById('editPositiveAnalysis').value,
-                        negativeAnalysis: document.getElementById('editNegativeAnalysis').value,
-                        exitOutlook: document.getElementById('editExitOutlook').value,
-                    };
-                }
-
-                try {
-                    const docRef = doc(db, newsCollectionPath, newsId);
-                    await updateDoc(docRef, updatedData);
-                    displayMessage("ニュース情報を更新しました。", false);
-                    editModal.style.display = 'none';
-                    fetchAndDisplayNews();
-                } catch (error) {
-                    console.error("更新中にエラー:", error);
-                    displayMessage("更新に失敗しました。", true);
-                }
-            });
-            
-            // ★★★★★ STEP 2-5: ニュース登録ロジックを更新 ★★★★★
-            const newsForm = document.getElementById('addNewsForm');
-            const newsUrlInput = document.getElementById('newsUrl');
-            const processingIndicator = document.getElementById('processingIndicator');
-            const functionUrl = "https://asia-northeast1-partnerflux.cloudfunctions.net/processNewsUrl";
-
-            newsForm.addEventListener('submit', async function(event) {
-                event.preventDefault();
-                const url = newsUrlInput.value.trim();
-                const category = document.querySelector('input[name="newsCategory"]:checked').value; // カテゴリを取得
-
-                if (!url) { displayMessage("URLを入力してください。", true); return; }
-                if (!userId) { displayMessage("ユーザー認証が完了していません。", true); return; }
-
-                submitButton.disabled = true;
-                processingIndicator.style.display = 'block';
-                displayMessage("記事を分析中です...", false);
-
-                try {
-                    const response = await fetch(functionUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        // ボディにcategoryを追加
-                        body: JSON.stringify({ url: url, userId: userId, category: category }),
-                    });
-
-                    const result = await response.json();
-                    if (!response.ok) {
-                        // Cloud Functionsからのエラーメッセージを適切に表示
-                        throw new Error(result.message || `サーバーエラー: ${response.status}`);
-                    }
-                    displayMessage(`「${result.data.title}」を登録しました。`, false);
-                    newsUrlInput.value = '';
-                    fetchAndDisplayNews();
-                } catch (error) {
-                    displayMessage(`エラー: ${error.message}`, true);
-                } finally {
-                    submitButton.disabled = false;
-                    processingIndicator.style.display = 'none';
                 }
             });
 
         } catch (error) {
-            console.error(error);
             displayMessage(error.message, true);
         }
 
-        function displayMessage(message, isError = false) {
-           messageArea.textContent = message;
-           messageArea.className = 'message-area'; 
-           if (message) {
-               messageArea.style.display = 'block';
-               if (isError) {
-                   messageArea.classList.add('message-error');
-               } else {
-                   messageArea.classList.add('message-success');
-               }
-           } else {
-               messageArea.style.display = 'none';
-           }
+        fetchCandidatesButton.addEventListener('click', async () => {
+             const selectedCategory = document.querySelector('input[name="newsCategory"]:checked').value;
+             const categoryName = selectedCategory === 'funding' ? '資金調達' : '事業提携';
+             displayMessage(`${categoryName}の候補ニュースを取得中です...`, false);
+             fetchCandidatesButton.disabled = true;
+
+             try {
+                const functionUrl = `${fetchCandidateNewsUrlBase}?category=${selectedCategory}`;
+                const response = await fetch(functionUrl);
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
+                displayMessage(result.message, false);
+                fetchAndDisplayCandidateNews();
+             } catch(error) {
+                console.error("候補の更新に失敗:", error);
+                displayMessage(`エラー: ${error.message}`, true);
+             } finally {
+                fetchCandidatesButton.disabled = false;
+             }
+        });
+        
+        function fetchAndDisplayAllNews() {
+            fetchAndDisplayRegisteredNews();
+            fetchAndDisplayCandidateNews();
         }
+
+        async function fetchAndDisplayRegisteredNews() {
+            newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">登録済みニュースを読み込み中...</td></tr>`;
+            try {
+                const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                const newsList = [];
+                querySnapshot.forEach(doc => newsList.push({ id: doc.id, ...doc.data() }));
+                newsListBody.innerHTML = ''; 
+                if (newsList.length === 0) {
+                    newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">登録済みのニュースはありません。</td></tr>`;
+                    return;
+                }
+                newsList.forEach(news => renderRegisteredNewsRow(news));
+            } catch (error) {
+                console.error("登録済みニュースの取得に失敗:", error);
+                newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-red-500">一覧の読み込みに失敗しました。 Firestoreのルールを確認してください。</td></tr>`;
+            }
+        }
+        
+        async function fetchAndDisplayCandidateNews() {
+            candidateNewsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">候補ニュースを読み込み中...</td></tr>`;
+            try {
+                const q = query(collection(db, candidateNewsCollectionPath), orderBy("discoveredAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                const candidateList = [];
+                querySnapshot.forEach(doc => candidateList.push({ id: doc.id, ...doc.data() }));
+                candidateNewsListBody.innerHTML = ''; 
+                if (candidateList.length === 0) {
+                    candidateNewsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">候補ニュースはありません。「候補を更新」ボタンを押して取得してください。</td></tr>`;
+                    return;
+                }
+                candidateList.forEach(news => renderCandidateNewsRow(news));
+            } catch (error) {
+                console.error("候補ニュースの取得に失敗:", error);
+                candidateNewsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-red-500">候補一覧の読み込みに失敗しました。Firestoreのルールを確認してください。</td></tr>`;
+            }
+        }
+        
+        function renderRegisteredNewsRow(news) {
+            const date = news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
+            const categoryText = news.category === 'funding' ? '資金調達' : (news.category === 'alliance' ? '事業提携' : 'その他');
+            const categoryClass = news.category === 'funding' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700';
+            const row = `<tr><td>${date}</td><td><span class="px-2 py-1 text-xs font-semibold rounded-full ${categoryClass}">${categoryText}</span></td><td>${news.title || '(タイトルなし)'}</td><td class="whitespace-nowrap"><button class="btn btn-success btn-sm edit-button" data-id="${news.id}">編集</button> <button class="btn btn-danger btn-sm delete-button" data-id="${news.id}" data-title="${news.title || ''}">削除</button></td></tr>`;
+            newsListBody.insertAdjacentHTML('beforeend', row);
+        }
+
+        function renderCandidateNewsRow(news) {
+            const date = news.discoveredAt ? new Date(news.discoveredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
+            const categoryText = news.category === 'funding' ? '資金調達' : (news.category === 'alliance' ? '事業提携' : 'その他');
+            const categoryClass = news.category === 'funding' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700';
+            const row = `<tr><td>${date}</td><td><span class="px-2 py-1 text-xs font-semibold rounded-full ${categoryClass}">${categoryText}</span></td><td><a href="${news.url}" target="_blank" class="text-blue-600 hover:underline">${news.title || '(タイトルなし)'}</a></td><td class="whitespace-nowrap"><button class="btn btn-primary btn-sm analyze-button" data-id="${news.id}" data-url="${news.url}" data-category="${news.category}">分析・登録</button> <button class="btn btn-secondary btn-sm reject-button" data-id="${news.id}" data-title="${news.title || ''}">却下</button></td></tr>`;
+            candidateNewsListBody.insertAdjacentHTML('beforeend', row);
+        }
+
+        function displayMessage(message, isError = false) {
+            messageArea.textContent = message;
+            messageArea.className = 'message-area';
+            messageArea.style.display = 'block';
+            messageArea.classList.add(isError ? 'message-error' : 'message-success');
+        }
+
+        document.getElementById('addNewsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('newsUrl').value.trim();
+            const category = document.querySelector('input[name="newsCategory"]:checked').value;
+            if (!url) { displayMessage("URLを入力してください。", true); return; }
+            await analyzeAndRegisterNews(url, category);
+            document.getElementById('newsUrl').value = '';
+        });
+
+        candidateNewsListBody.addEventListener('click', (event) => {
+            const target = event.target;
+            const { id, url, category, title } = target.dataset;
+
+            if (target.classList.contains('analyze-button')) {
+                analyzeAndRegisterNews(url, category, id);
+            } else if (target.classList.contains('reject-button')) {
+                showConfirmationModal(`候補「${title}」を却下しますか？`, async () => {
+                    await deleteDoc(doc(db, candidateNewsCollectionPath, id));
+                    displayMessage("候補を却下しました。", false);
+                    fetchAndDisplayCandidateNews();
+                });
+            }
+        });
+        
+        newsListBody.addEventListener('click', async (event) => {
+            const target = event.target;
+            const { id, title } = target.dataset;
+
+            if (target.classList.contains('delete-button')) {
+                showConfirmationModal(`記事「${title}」を本当に削除しますか？`, async () => {
+                    await deleteDoc(doc(db, newsCollectionPath, id));
+                    displayMessage("ニュースを削除しました。", false);
+                    fetchAndDisplayRegisteredNews();
+                });
+            } else if (target.classList.contains('edit-button')) {
+                openEditModal(id);
+            }
+        });
+
+        async function openEditModal(newsId) {
+            const docRef = doc(db, newsCollectionPath, newsId);
+            const docSnap = await getDoc(docRef);
+            if (!docSnap.exists()) {
+                displayMessage("編集対象のニュースが見つかりません。", true);
+                return;
+            }
+            const data = docSnap.data();
+            const category = data.category || 'funding';
+            
+            document.getElementById('editNewsId').value = newsId;
+            document.getElementById('editNewsCategory').value = category;
+
+            const fundingFields = document.getElementById('funding-fields');
+            const allianceFields = document.getElementById('alliance-fields');
+
+            if (category === 'alliance') {
+                fundingFields.style.display = 'none';
+                allianceFields.style.display = 'block';
+                document.getElementById('editAllianceTitle').value = data.title || '';
+                document.getElementById('editPrimaryCompany').value = data.primaryCompany || '';
+                document.getElementById('editPartnerCompany').value = data.partnerCompany || '';
+                document.getElementById('editAllianceType').value = data.allianceType || '';
+                document.getElementById('editAllianceSummary').value = data.summary || '';
+                document.getElementById('editSynergyAnalysis').value = data.synergyAnalysis || '';
+                document.getElementById('editRiskAnalysis').value = data.riskAnalysis || '';
+                document.getElementById('editFutureOutlook').value = data.futureOutlook || '';
+            } else {
+                allianceFields.style.display = 'none';
+                fundingFields.style.display = 'block';
+                document.getElementById('editTitle').value = data.title || '';
+                document.getElementById('editStartupName').value = data.startupName || '';
+                document.getElementById('editBusinessDescription').value = data.businessDescription || '';
+                document.getElementById('editRound').value = data.round || '';
+                document.getElementById('editFundingAmount').value = data.fundingAmount || '';
+                document.getElementById('editLeadInvestor').value = data.leadInvestor || '';
+                document.getElementById('editSummary').value = data.summary || '';
+                document.getElementById('editPositiveAnalysis').value = data.positiveAnalysis || '';
+                document.getElementById('editNegativeAnalysis').value = data.negativeAnalysis || '';
+                document.getElementById('editExitOutlook').value = data.exitOutlook || '';
+            }
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        editNewsForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const newsId = document.getElementById('editNewsId').value;
+            const category = document.getElementById('editNewsCategory').value;
+            let updatedData = {};
+
+            if (category === 'alliance') {
+                updatedData = {
+                    title: document.getElementById('editAllianceTitle').value,
+                    primaryCompany: document.getElementById('editPrimaryCompany').value,
+                    partnerCompany: document.getElementById('editPartnerCompany').value,
+                    allianceType: document.getElementById('editAllianceType').value,
+                    summary: document.getElementById('editAllianceSummary').value,
+                    synergyAnalysis: document.getElementById('editSynergyAnalysis').value,
+                    riskAnalysis: document.getElementById('editRiskAnalysis').value,
+                    futureOutlook: document.getElementById('editFutureOutlook').value,
+                };
+            } else {
+                updatedData = {
+                    title: document.getElementById('editTitle').value,
+                    startupName: document.getElementById('editStartupName').value,
+                    businessDescription: document.getElementById('editBusinessDescription').value,
+                    round: document.getElementById('editRound').value,
+                    fundingAmount: document.getElementById('editFundingAmount').value,
+                    leadInvestor: document.getElementById('editLeadInvestor').value,
+                    summary: document.getElementById('editSummary').value,
+                    positiveAnalysis: document.getElementById('editPositiveAnalysis').value,
+                    negativeAnalysis: document.getElementById('editNegativeAnalysis').value,
+                    exitOutlook: document.getElementById('editExitOutlook').value,
+                };
+            }
+            try {
+                const docRef = doc(db, newsCollectionPath, newsId);
+                await updateDoc(docRef, updatedData);
+                displayMessage("ニュース情報を更新しました。", false);
+                document.getElementById('editModal').style.display = 'none';
+                fetchAndDisplayRegisteredNews();
+            } catch (error) {
+                displayMessage("更新に失敗しました。", true);
+            }
+        });
+
+        async function analyzeAndRegisterNews(url, category, candidateId = null) {
+            if (!userId) { displayMessage("ユーザー認証が完了していません。", true); return; }
+
+            document.getElementById('processingIndicator').style.display = 'block';
+            displayMessage("記事を分析中です...", false);
+
+            try {
+                const response = await fetch(processNewsUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, userId, category }),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.message || `サーバーエラー: ${response.status}`);
+                
+                displayMessage(`「${result.data.title}」を登録しました。`, false);
+                
+                if (candidateId) {
+                    await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
+                }
+                
+                fetchAndDisplayAllNews();
+
+            } catch (error) {
+                console.error("分析・登録処理エラー:", error);
+                displayMessage(`エラー: ${error.message}`, true);
+            } finally {
+                document.getElementById('processingIndicator').style.display = 'none';
+            }
+        }
+        
+        function showConfirmationModal(message, callback) {
+            document.getElementById('confirmationMessage').textContent = message;
+            onConfirmCallback = callback;
+            document.getElementById('confirmationModal').style.display = 'flex';
+        }
+
+        function hideConfirmationModal() {
+            document.getElementById('confirmationModal').style.display = 'none';
+            onConfirmCallback = null;
+        }
+
+        document.getElementById('confirmActionButton').addEventListener('click', () => {
+            if (onConfirmCallback) {
+                onConfirmCallback().catch(err => displayMessage(`操作に失敗しました: ${err.message}`, true));
+            }
+            hideConfirmationModal();
+        });
+        
+        document.getElementById('confirmCancelButton').addEventListener('click', hideConfirmationModal);
+        closeModalButton.addEventListener('click', () => { document.getElementById('editModal').style.display = 'none'; });
     </script>
 </body>
 </html>

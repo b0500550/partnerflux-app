@@ -1,7 +1,7 @@
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const cors = require("cors")({origin: true});
-const axios = require("axios");
+const axios =require("axios");
 const cheerio = require("cheerio");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
 
@@ -15,24 +15,13 @@ if (!GEMINI_API_KEY) {
 }
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-/**
- * HTMLから主要なテキストコンテンツを抽出します。
- * @param {string} html スクレイピング対象のHTML。
- * @return {string} 抽出されたテキスト。
- */
 function extractMainContent(html) {
   const $ = cheerio.load(html);
   $("script, style, nav, footer, header, noscript, form, iframe").remove();
-  const mainContent = $("article, main, .content, .main, body")
-      .first().text();
+  const mainContent = $("article, main, .content, .main, body").first().text();
   return mainContent.replace(/\s\s+/g, " ").trim();
 }
 
-/**
- * AIの応答テキストからJSON部分を安全に抽出します。
- * @param {string} text AIの応答テキスト。
- * @return {object} パースされたJSONオブジェクト。
- */
 function parseJsonResponse(text) {
   const match = text.match(/```json\s*([\s\S]*?)\s*```/);
   if (match && match[1]) {
@@ -41,7 +30,6 @@ function parseJsonResponse(text) {
   return JSON.parse(text);
 }
 
-// ★★★★★ AIに自動で強調させる指示を追加 ★★★★★
 const alliancePrompt = `あなたは、世界的な経営コンサルティングファームのシニアパートナーです。常に複数のペルソナ（中立的なアナリスト、楽観的な戦略家、慎重なリスク管理担当）を使い分け、以下の事業提携に関するニュース記事を分析してください。
 分析結果は、必ず下記のJSON形式で、各項目の指示に忠実に従って記述すること。また、各分析項目（summary, synergyAnalysis, riskAnalysis, futureOutlook）の文章中では、最も重要だと判断したキーワードやフレーズを3～5箇所選び、**その部分をアスタリスク2つで囲んでください**（例：**これが重要な提携**です）。
 
@@ -75,6 +63,115 @@ const fundingPrompt = `あなたは、シリコンバレーで名を馳せるト
 }`;
 
 
+/**
+ * PR TIMESの検索結果から直接ニュース候補を取得する、シンプルで堅牢な最終完成版
+ */
+exports.fetchCandidateNews = functions
+    .runWith({timeoutSeconds: 540, memory: "1GB"})
+    .region("asia-northeast1")
+    .https.onRequest((req, res) => {
+      cors(req, res, async () => {
+        if (req.method !== "GET") {
+          return res.status(405).send("Method Not Allowed");
+        }
+
+        const requestedCategory = req.query.category;
+        if (!requestedCategory || !['funding', 'alliance'].includes(requestedCategory)) {
+            return res.status(400).json({ message: "無効なカテゴリが指定されました。'funding' または 'alliance' を指定してください。" });
+        }
+        functions.logger.info(`ニュース候補の取得処理を開始します (カテゴリ: ${requestedCategory}, モード: 検索結果直接取得)...`);
+
+        try {
+          const projectId = JSON.parse(process.env.FIREBASE_CONFIG).projectId;
+          const newsCollection = db.collection(`artifacts/${projectId}/public/data/news`);
+          const candidateCollection = db.collection(`artifacts/${projectId}/public/data/candidate_news`);
+
+          const [newsSnapshot, candidateSnapshot] = await Promise.all([
+            newsCollection.select("originalUrl").get(),
+            candidateCollection.select("url").get(),
+          ]);
+
+          const existingUrls = new Set();
+          newsSnapshot.forEach((doc) => existingUrls.add(doc.data().originalUrl));
+          candidateSnapshot.forEach((doc) => existingUrls.add(doc.data().url));
+          functions.logger.info(`既存のURLを ${existingUrls.size} 件確認しました。`);
+
+          const keywordsToSearch = {
+            funding: ["資金調達"],
+            alliance: ["業務提携", "資本業務提携", "協業", "買収", "M&A"],
+          };
+          
+          const uniqueNewArticles = new Map();
+
+          // ★★★★★ 核心のロジック: カテゴリに応じたキーワードで直接検索し、結果を信頼する ★★★★★
+          for (const keyword of keywordsToSearch[requestedCategory]) {
+            const searchUrl = `https://prtimes.jp/main/action.php?run=html&page=searchkey&search_word=${encodeURIComponent(keyword)}`;
+            functions.logger.info(`キーワード「${keyword}」で検索します: ${searchUrl}`);
+
+            try {
+                const listPageResponse = await axios.get(searchUrl, {
+                    headers: {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"},
+                });
+                
+                const $list = cheerio.load(listPageResponse.data);
+                const jsonDataText = $list('script#__NEXT_DATA__[type="application/json"]').html();
+                
+                if (!jsonDataText) {
+                    functions.logger.warn(`キーワード「${keyword}」の検索結果でJSONデータが見つかりませんでした。`);
+                    continue;
+                }
+                
+                const pageData = JSON.parse(jsonDataText);
+                const articles = pageData?.props?.pageProps?.dehydratedState?.queries?.[0]?.state?.data?.pages?.[0]?.releaseList || [];
+                functions.logger.info(`「${keyword}」の検索結果から ${articles.length} 件の記事リストを抽出しました。`);
+
+                for (const article of articles) {
+                    if (!article.releaseUrl || !article.title) continue;
+                    
+                    const fullUrl = `https://prtimes.jp${article.releaseUrl}`;
+                    if (existingUrls.has(fullUrl) || uniqueNewArticles.has(fullUrl)) continue;
+
+                    uniqueNewArticles.set(fullUrl, {
+                        title: article.title,
+                        url: fullUrl,
+                        category: requestedCategory,
+                    });
+                }
+            } catch (searchError) {
+                functions.logger.error(`キーワード「${keyword}」での検索中にエラーが発生しました。`, searchError.message);
+            }
+          }
+
+          if (uniqueNewArticles.size > 0) {
+            const batch = db.batch();
+            uniqueNewArticles.forEach((article) => {
+              const candidateRef = candidateCollection.doc();
+              batch.set(candidateRef, {
+                title: article.title,
+                url: article.url,
+                category: article.category,
+                discoveredAt: admin.firestore.FieldValue.serverTimestamp(),
+                status: "candidate",
+              });
+            });
+            await batch.commit();
+            const message = `正常に完了: ${uniqueNewArticles.size}件の新しいニュース候補を追加しました。`;
+            return res.status(200).json({message: message, count: uniqueNewArticles.size});
+          } else {
+            const message = "新しいニュース候補は見つかりませんでした。";
+            return res.status(200).json({message: message, count: 0});
+          }
+        } catch (error) {
+          functions.logger.error("ニュース候補の取得処理中に重大なエラーが発生しました:", error);
+          const errorMessage = error.response ? `外部サイトへのアクセスエラー(ステータス: ${error.response.status})` : error.message;
+          return res.status(500).json({message: errorMessage});
+        }
+      });
+    });
+
+/**
+ * URLを元にニュースを分析し、結果をDBに保存する関数
+ */
 exports.processNewsUrl = functions
     .runWith({timeoutSeconds: 300, memory: "1GB"})
     .region("asia-northeast1")
@@ -86,30 +183,23 @@ exports.processNewsUrl = functions
         
         const {url, userId, category} = req.body;
         if (!url || !userId || !category) {
-          return res.status(400).send("URL, UserId, and Category are required.");
+          return res.status(400).json({message: "URL, UserId, Categoryのすべてが必要です。"});
         }
         
-        let promptTemplate;
-        if (category === "funding") {
-            promptTemplate = fundingPrompt;
-        } else if (category === "alliance") {
-            promptTemplate = alliancePrompt;
-        } else {
-            return res.status(400).send("Invalid category specified.");
-        }
+        const promptTemplate = category === "funding" ? fundingPrompt : alliancePrompt;
 
         try {
           const response = await axios.get(url, {
             headers: {"User-Agent": "Mozilla/5.0"},
           });
           const extractedText = extractMainContent(response.data);
-          if (extractedText.length < 100) {
-            throw new Error("記事本文を十分に抽出できませんでした。");
-          }
-          const model = genAI.getGenerativeModel({model: "gemini-1.5-flash"});
-          
-          const fullPrompt = `${promptTemplate}\n\n--- 記事テキスト ---\n${extractedText.substring(0, 30000)}`;
 
+          if (extractedText.length < 100) {
+            throw new Error("記事本文を十分に抽出できませんでした。文字数が少なすぎます。");
+          }
+
+          const model = genAI.getGenerativeModel({model: "gemini-1.5-flash"});
+          const fullPrompt = `${promptTemplate}\n\n--- 記事テキスト ---\n${extractedText.substring(0, 30000)}`;
           const result = await model.generateContent(fullPrompt);
           const analyzedData = parseJsonResponse(result.response.text());
 
@@ -122,19 +212,25 @@ exports.processNewsUrl = functions
             registeredAt: admin.firestore.FieldValue.serverTimestamp(),
             registeredBy: userId,
             status: "published",
-            category: category, 
+            category: category,
           });
 
           return res.status(200).json({
-            message: "ニュースの分析と保存が完了しました。", docId: docRef.id, data: analyzedData,
+            message: "ニュースの分析と保存が完了しました。",
+            docId: docRef.id,
+            data: analyzedData,
           });
         } catch (error) {
           functions.logger.error("処理中にエラー:", error);
-          return res.status(500).json({ message: error.message || "An unexpected error occurred." });
+          const errorMessage = error.response ? JSON.stringify(error.response.data) : error.message;
+          return res.status(500).json({message: `エラーが発生しました: ${errorMessage}`});
         }
       });
     });
 
+/**
+ * 登録済みのニュース一覧を取得する関数
+ */
 exports.getNewsList = functions
     .region("asia-northeast1")
     .https.onRequest((req, res) => {
@@ -162,7 +258,7 @@ exports.getNewsList = functions
           const results = newsList.map((item) => {
             const {registeredAtMillis, ...rest} = item;
             rest.registeredAt = new Date(item.registeredAtMillis)
-                .toISOString();
+              .toISOString();
             return rest;
           });
           return res.status(200).json(results);
@@ -173,6 +269,9 @@ exports.getNewsList = functions
       });
     });
 
+/**
+ * 指定されたIDのニュース詳細を取得する関数
+ */
 exports.getNewsDetail = functions
     .region("asia-northeast1")
     .https.onRequest(async (req, res) => {
