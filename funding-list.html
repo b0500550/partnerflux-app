@@ -46,7 +46,16 @@
         </div>
     </main>
 
-    <footer class="bg-gray-900 text-gray-400 mt-16"><div class="container mx-auto px-6 py-8 text-center"><p class="text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p></div></footer>
+    <footer class="bg-gray-900 text-gray-400 mt-16">
+        <div class="container mx-auto px-6 py-8">
+            <div class="flex justify-center space-x-6 mb-6">
+                <a href="/operator.html" class="hover:text-white transition-colors duration-300">運営者情報</a>
+                <a href="/privacy-policy.html" class="hover:text-white transition-colors duration-300">プライバシーポリシー</a>
+                <a href="/disclaimer.html" class="hover:text-white transition-colors duration-300">免責事項</a>
+            </div>
+            <p class="text-center text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p>
+        </div>
+    </footer>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -56,7 +65,6 @@ import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken }
 const newsListContainer = document.getElementById('news-list-container');
 const loadingIndicator = document.getElementById('loading');
 
-// ★★★ 修正: admin.htmlと共通の初期化処理 ★★★
 try {
     let firebaseConfig;
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'partnerflux';
