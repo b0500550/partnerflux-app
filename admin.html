@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; }
-        .admin-container { max-width: 1000px; margin: 40px auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .admin-container { max-width: 1200px; margin: 40px auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .section-container { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e5e7eb;}
         .section-title { font-size: 1.5rem; font-weight: 600; color: #343a40; margin-bottom: 1.5rem; }
         .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: #495057; }
@@ -42,6 +42,7 @@
         .category-selection label { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
         .category-selection input[type="radio"] { display: none; }
         .category-selection input[type="radio"]:checked + label { background-color: #007bff; color: white; border-color: #007bff; box-shadow: 0 0 5px rgba(0,123,255,0.5); }
+        .comment-cell { white-space: pre-wrap; word-break: break-all; max-width: 400px; }
     </style>
 </head>
 <body>
@@ -70,6 +71,26 @@
             </form>
         </div>
         <div id="messageArea" class="message-area"></div>
+
+        <!-- ★★★ ここからが追加箇所 ★★★ -->
+        <div class="section-container">
+            <h2 class="section-title">問い合わせ一覧</h2>
+            <div class="overflow-x-auto">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>受信日時</th>
+                            <th>Email</th>
+                            <th>コメント</th>
+                            <th>ステータス</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inquiries-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+        <!-- ★★★ ここまでが追加箇所 ★★★ -->
 
         <div class="section-container">
             <div class="flex justify-between items-center mb-6">
@@ -119,6 +140,12 @@
             <form id="editNewsForm">
                 <input type="hidden" id="editNewsId">
                 <input type="hidden" id="editNewsCategory">
+                
+                <div>
+                    <label for="editRegisteredAt" class="form-label">登録日</label>
+                    <input type="date" id="editRegisteredAt" class="form-input">
+                </div>
+
                 <div id="funding-fields" style="display: none;">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div><label for="editTitle" class="form-label">タイトル</label><input type="text" id="editTitle" class="form-input"></div>
@@ -137,12 +164,12 @@
                 </div>
                 <div id="alliance-fields" style="display: none;">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div><label for="editAllianceTitle" class="form-label">タイトル</label><input type="text" id="editAllianceTitle" class="form-input"></div>
-                      <div><label for="editAllianceType" class="form-label">提携の種類</label><input type="text" id="editAllianceType" class="form-input"></div>
+                        <div><label for="editAllianceTitle" class="form-label">タイトル</label><input type="text" id="editAllianceTitle" class="form-input"></div>
+                        <div><label for="editAllianceType" class="form-label">提携の種類</label><input type="text" id="editAllianceType" class="form-input"></div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div><label for="editPrimaryCompany" class="form-label">主導企業</label><input type="text" id="editPrimaryCompany" class="form-input"></div>
-                      <div><label for="editPartnerCompany" class="form-label">提携相手企業</label><input type="text" id="editPartnerCompany" class="form-input"></div>
+                        <div><label for="editPrimaryCompany" class="form-label">主導企業</label><input type="text" id="editPrimaryCompany" class="form-input"></div>
+                        <div><label for="editPartnerCompany" class="form-label">提携相手企業</label><input type="text" id="editPartnerCompany" class="form-input"></div>
                     </div>
                     <div><label for="editAllianceSummary" class="form-label">サマリ</label><textarea id="editAllianceSummary" class="edit-form-textarea" rows="5"></textarea></div>
                     <div><label for="editSynergyAnalysis" class="form-label">シナジー分析</label><textarea id="editSynergyAnalysis" class="edit-form-textarea" rows="5"></textarea></div>
@@ -164,10 +191,9 @@
         </div>
     </div>
 
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
         // DOM Elements
@@ -176,6 +202,7 @@
         const fetchCandidatesButton = document.getElementById('fetchCandidatesButton');
         const newsListBody = document.getElementById('news-list-body');
         const candidateNewsListBody = document.getElementById('candidate-news-list-body');
+        const inquiriesListBody = document.getElementById('inquiries-list-body'); // ★★★ 追加
         const selectAllCandidatesCheckbox = document.getElementById('select-all-candidates');
         const bulkActionContainer = document.getElementById('bulk-action-container');
         const bulkAnalyzeButton = document.getElementById('bulk-analyze-button');
@@ -187,9 +214,11 @@
 
         // State & Firebase variables
         let onConfirmCallback = null;
-        let auth, userId, db, newsCollectionPath, candidateNewsCollectionPath, processNewsUrl, fetchCandidateNewsUrlBase;
+        // ★★★ inquiriesCollectionPath を追加
+        let auth, userId, db, newsCollectionPath, candidateNewsCollectionPath, inquiriesCollectionPath, processNewsUrl, fetchCandidateNewsUrlBase;
         let allRegisteredNews = [];
         let allCandidateNews = [];
+        let allInquiries = []; // ★★★ 追加
         let isBulkProcessing = false;
 
         // --- 初期化処理 ---
@@ -225,6 +254,7 @@
                 const projectId = firebaseConfig.projectId;
                 newsCollectionPath = `artifacts/${appId}/public/data/news`;
                 candidateNewsCollectionPath = `artifacts/${appId}/public/data/candidate_news`;
+                inquiriesCollectionPath = `artifacts/${appId}/public/data/inquiries`; // ★★★ 追加
                 processNewsUrl = `https://asia-northeast1-${projectId}.cloudfunctions.net/processNewsUrl`;
                 fetchCandidateNewsUrlBase = `https://asia-northeast1-${projectId}.cloudfunctions.net/fetchCandidateNews`;
                 
@@ -233,7 +263,7 @@
                         userId = user.uid;
                         submitButton.disabled = false;
                         fetchCandidatesButton.disabled = false;
-                        await fetchAndStoreAllNews();
+                        await fetchAllData(); // ★★★ 関数名を変更
                     } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
@@ -252,17 +282,15 @@
         fetchCandidatesButton.addEventListener('click', handleFetchCandidates);
         document.querySelectorAll('input[name="newsCategoryFilter"]').forEach(radio => radio.addEventListener('change', renderFilteredLists));
         
-        // 候補ニュースのイベント
         selectAllCandidatesCheckbox.addEventListener('change', handleSelectAll);
         candidateNewsListBody.addEventListener('change', (e) => e.target.classList.contains('candidate-checkbox') && updateBulkActionUI());
         candidateNewsListBody.addEventListener('click', handleCandidateActions);
         bulkAnalyzeButton.addEventListener('click', handleBulkAnalyze);
         bulkRejectButton.addEventListener('click', handleBulkReject);
 
-        // ★★★ 修正: 登録済みニュースのイベントリスナーを追加 ★★★
         newsListBody.addEventListener('click', handleRegisteredNewsActions);
+        inquiriesListBody.addEventListener('click', handleInquiryActions); // ★★★ 追加
 
-        // ★★★ 修正: モーダル関連のイベントリスナーを復元 ★★★
         document.getElementById('closeModalButton').addEventListener('click', () => editModal.style.display = 'none');
         document.getElementById('confirmCancelButton').addEventListener('click', () => confirmationModal.style.display = 'none');
         document.getElementById('confirmActionButton').addEventListener('click', () => {
@@ -275,10 +303,15 @@
 
 
         // --- データ取得 & 描画 ---
-        async function fetchAndStoreAllNews() {
-            displayMessage("ニュースデータを読み込んでいます...", false);
-            await Promise.all([ fetchAndStoreRegisteredNews(), fetchAndStoreCandidateNews() ]);
-            renderFilteredLists();
+        // ★★★ fetchAllData にリネームし、問い合わせ取得を追加
+        async function fetchAllData() {
+            displayMessage("全データを読み込んでいます...", false);
+            await Promise.all([ 
+                fetchAndStoreRegisteredNews(), 
+                fetchAndStoreCandidateNews(),
+                fetchAndStoreInquiries() 
+            ]);
+            renderAllLists(); // ★★★ renderAllLists を呼び出すように変更
             displayMessage("データの読み込みが完了しました。", false);
             setTimeout(() => { messageArea.style.display = 'none'; }, 2000);
         }
@@ -299,19 +332,41 @@
             } catch (error) { displayMessage("候補ニュースの読み込みに失敗しました。", true); }
         }
         
+        // ★★★ 問い合わせ取得関数を追加
+        async function fetchAndStoreInquiries() {
+            try {
+                const q = query(collection(db, inquiriesCollectionPath), orderBy("createdAt", "desc"));
+                const snapshot = await getDocs(q);
+                allInquiries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error("Error fetching inquiries:", error);
+                displayMessage("問い合わせの読み込みに失敗しました。", true);
+            }
+        }
+        
+        // ★★★ ニュースのフィルタリングと問い合わせ描画を分離
+        function renderAllLists() {
+            renderFilteredLists();
+            renderInquiriesList();
+        }
+        
         function renderFilteredLists() {
             const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
             newsListBody.innerHTML = '';
             const filteredRegistered = allRegisteredNews.filter(news => news.category === selectedCategory);
-            filteredRegistered.length > 0
-                ? filteredRegistered.forEach(renderRegisteredNewsRow)
-                : newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">このカテゴリの登録済みニュースはありません。</td></tr>`;
+            if (filteredRegistered.length > 0) {
+                filteredRegistered.forEach(renderRegisteredNewsRow);
+            } else {
+                newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">このカテゴリの登録済みニュースはありません。</td></tr>`;
+            }
             
             candidateNewsListBody.innerHTML = '';
             const filteredCandidates = allCandidateNews.filter(news => news.category === selectedCategory);
-            filteredCandidates.length > 0
-                ? filteredCandidates.forEach(renderCandidateNewsRow)
-                : candidateNewsListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">このカテゴリの候補ニュースはありません。</td></tr>`;
+            if (filteredCandidates.length > 0) {
+                filteredCandidates.forEach(renderCandidateNewsRow);
+            } else {
+                candidateNewsListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">このカテゴリの候補ニュースはありません。</td></tr>`;
+            }
 
             updateBulkActionUI();
         }
@@ -341,25 +396,53 @@
                 </tr>`;
             candidateNewsListBody.insertAdjacentHTML('beforeend', row);
         }
+        
+        // ★★★ 問い合わせリスト描画関数を追加
+        function renderInquiriesList() {
+            inquiriesListBody.innerHTML = '';
+            if (allInquiries.length > 0) {
+                allInquiries.forEach(renderInquiryRow);
+            } else {
+                inquiriesListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">問い合わせはありません。</td></tr>`;
+            }
+        }
+
+        // ★★★ 問い合わせ一行の描画関数を追加
+        function renderInquiryRow(inquiry) {
+            const date = inquiry.createdAt ? new Date(inquiry.createdAt.seconds * 1000).toLocaleString('ja-JP') : '日時不明';
+            const email = inquiry.email || '（記載なし）';
+            const status = inquiry.status || 'new';
+
+            const row = `
+                <tr>
+                    <td>${date}</td>
+                    <td>${email}</td>
+                    <td class="comment-cell">${inquiry.comment}</td>
+                    <td>${status}</td>
+                    <td class="whitespace-nowrap">
+                        <button class="btn btn-danger btn-sm delete-inquiry-button" data-id="${inquiry.id}">削除</button>
+                    </td>
+                </tr>`;
+            inquiriesListBody.insertAdjacentHTML('beforeend', row);
+        }
 
         // --- イベントハンドラ ---
-
         async function handleFetchCandidates() {
              const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
              displayMessage(`${selectedCategory === 'funding' ? '資金調達' : '事業提携'}の候補ニュースを取得中です...`, false);
              fetchCandidatesButton.disabled = true;
              try {
-                const functionUrl = `${fetchCandidateNewsUrlBase}?category=${selectedCategory}`;
-                const response = await fetch(functionUrl);
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
-                displayMessage(result.message, false);
-                await fetchAndStoreCandidateNews();
-                renderFilteredLists();
+                 const functionUrl = `${fetchCandidateNewsUrlBase}?category=${selectedCategory}`;
+                 const response = await fetch(functionUrl);
+                 const result = await response.json();
+                 if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
+                 displayMessage(result.message, false);
+                 await fetchAndStoreCandidateNews();
+                 renderFilteredLists();
              } catch(error) {
-                displayMessage(`エラー: ${error.message}`, true);
+                 displayMessage(`エラー: ${error.message}`, true);
              } finally {
-                fetchCandidatesButton.disabled = false;
+                 fetchCandidatesButton.disabled = false;
              }
         }
         
@@ -368,10 +451,8 @@
             const url = document.getElementById('newsUrl').value.trim();
             const category = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
             if (!url) return displayMessage("URLを入力してください。", true);
-
             submitButton.disabled = true;
-            await analyzeAndRegisterNews(url, category)
-                .catch(err => console.error(err));
+            await analyzeAndRegisterNews(url, category).catch(err => console.error(err));
             submitButton.disabled = false;
             document.getElementById('newsUrl').value = '';
         }
@@ -379,9 +460,7 @@
         async function handleCandidateActions(event) {
             const target = event.target;
             if (!target.classList.contains('analyze-button') && !target.classList.contains('reject-button')) return;
-            
             const { id, url, category, title } = target.dataset;
-
             if (target.classList.contains('analyze-button')) {
                 target.disabled = true;
                 target.textContent = '処理中';
@@ -396,13 +475,10 @@
             }
         }
 
-        // ★★★ 修正: 登録済みニュースのイベントハンドラを追加 ★★★
         async function handleRegisteredNewsActions(event) {
             const target = event.target;
             if (!target.classList.contains('edit-button') && !target.classList.contains('delete-button')) return;
-
             const { id, title } = target.dataset;
-
             if (target.classList.contains('edit-button')) {
                 openEditModal(id);
             } else if (target.classList.contains('delete-button')) {
@@ -411,6 +487,20 @@
                     displayMessage("ニュースを削除しました。", false);
                     await fetchAndStoreRegisteredNews();
                     renderFilteredLists();
+                });
+            }
+        }
+
+        // ★★★ 問い合わせアクションのハンドラを追加
+        async function handleInquiryActions(event) {
+            const target = event.target;
+            if (target.classList.contains('delete-inquiry-button')) {
+                const { id } = target.dataset;
+                showConfirmationModal(`この問い合わせを削除しますか？`, async () => {
+                    await deleteDoc(doc(db, inquiriesCollectionPath, id));
+                    displayMessage("問い合わせを削除しました。", false);
+                    await fetchAndStoreInquiries();
+                    renderInquiriesList();
                 });
             }
         }
@@ -431,14 +521,16 @@
             } else {
                 bulkActionContainer.style.display = 'none';
             }
-            const allCheckboxes = document.querySelectorAll('.candidate-checkbox');
-            selectAllCandidatesCheckbox.checked = allCheckboxes.length > 0 && selectedCount === allCheckboxes.length;
+            selectAllCandidatesCheckbox.checked = document.querySelectorAll('.candidate-checkbox').length > 0 && selectedCount === document.querySelectorAll('.candidate-checkbox').length;
+        }
+        
+        function getSelectedCandidates() {
+            return Array.from(document.querySelectorAll('.candidate-checkbox:checked')).map(cb => cb.dataset);
         }
         
         async function handleBulkAnalyze() {
             const selected = getSelectedCandidates();
             if (selected.length === 0) return;
-
             showConfirmationModal(`${selected.length}件のニュースを分析・登録しますか？`, async () => {
                 isBulkProcessing = true;
                 bulkAnalyzeButton.disabled = true;
@@ -456,7 +548,7 @@
                     }
                 }
                 displayMessage(`一括処理完了: ${successCount}件成功, ${errorCount}件失敗`, errorCount > 0);
-                await fetchAndStoreAllNews();
+                await fetchAllData();
                 isBulkProcessing = false;
                 bulkAnalyzeButton.disabled = false;
                 bulkAnalyzeButton.textContent = '選択した項目を分析・登録';
@@ -464,9 +556,8 @@
         }
         
         async function handleBulkReject() {
-             const selected = getSelectedCandidates();
+            const selected = getSelectedCandidates();
             if (selected.length === 0) return;
-
             showConfirmationModal(`${selected.length}件の候補を却下しますか？`, async () => {
                 const batch = writeBatch(db);
                 selected.forEach(item => batch.delete(doc(db, candidateNewsCollectionPath, item.id)));
@@ -495,7 +586,7 @@
                 if (!isBulkProcessing) {
                     displayMessage(`「${result.data.title}」を登録しました。`, false);
                     if (candidateId) await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
-                    await fetchAndStoreAllNews(); 
+                    await fetchAllData(); 
                 } else if (candidateId) {
                     await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
                 }
@@ -535,9 +626,17 @@
             document.getElementById('editNewsId').value = newsId;
             document.getElementById('editNewsCategory').value = category;
 
+            if (data.registeredAt) {
+                const registeredDate = data.registeredAt.toDate();
+                const year = registeredDate.getFullYear();
+                const month = String(registeredDate.getMonth() + 1).padStart(2, '0');
+                const day = String(registeredDate.getDate()).padStart(2, '0');
+                document.getElementById('editRegisteredAt').value = `${year}-${month}-${day}`;
+            }
+
             const fundingFields = document.getElementById('funding-fields');
             const allianceFields = document.getElementById('alliance-fields');
-
+            
             if (category === 'alliance') {
                 fundingFields.style.display = 'none';
                 allianceFields.style.display = 'block';
@@ -572,8 +671,15 @@
             const category = document.getElementById('editNewsCategory').value;
             let updatedData = {};
 
+            const newDateString = document.getElementById('editRegisteredAt').value;
+            if (newDateString) {
+                const newDate = new Date(newDateString);
+                updatedData.registeredAt = Timestamp.fromDate(newDate);
+            }
+
             if (category === 'alliance') {
                 updatedData = {
+                    ...updatedData,
                     title: document.getElementById('editAllianceTitle').value,
                     primaryCompany: document.getElementById('editPrimaryCompany').value,
                     partnerCompany: document.getElementById('editPartnerCompany').value,
@@ -585,6 +691,7 @@
                 };
             } else {
                 updatedData = {
+                    ...updatedData,
                     title: document.getElementById('editTitle').value,
                     startupName: document.getElementById('editStartupName').value,
                     businessDescription: document.getElementById('editBusinessDescription').value,
@@ -606,9 +713,9 @@
                 renderFilteredLists();
             } catch (error) {
                 displayMessage("更新に失敗しました。", true);
+                console.error("Update failed: ", error);
             }
         }
-
     </script>
 </body>
 </html>
