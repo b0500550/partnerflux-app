@@ -2,6 +2,17 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDOHbwN4r3ykGu5VlC2hErpNUNPXFjja4E",
+        authDomain: "partnerflux.firebaseapp.com",
+        projectId: "partnerflux",
+        storageBucket: "partnerflux.firebasestorage.app",
+        messagingSenderId: "897391136072",
+        appId: "1:897391136072:web:dd928318965cdbd808b77d",
+        measurementId: "G-6DQ8KBXVM0"
+      };
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ニュース詳細 - PartnerFlux</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,7 +34,6 @@
     </style>
 </head>
 <body class="text-gray-800">
-
     <header class="header-section shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="/" class="logo-container"><img src="/logo.jpg" alt="PartnerFlux Logo" class="h-24"></a>
@@ -34,11 +44,9 @@
             </nav>
         </div>
     </header>
-
     <main id="main-content" class="container mx-auto px-6 py-12">
         <div id="loading" class="loading-container"><p class="text-gray-600">記事データを読み込んでいます...</p></div>
     </main>
-
     <footer class="bg-gray-900 text-gray-400 mt-16">
         <div class="container mx-auto px-6 py-8">
             <div class="flex justify-center space-x-6 mb-6">
@@ -50,59 +58,30 @@
             <p class="text-center text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p>
         </div>
     </footer>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
-
 const mainContent = document.getElementById('main-content');
 const loadingIndicator = document.getElementById('loading');
 const params = new URLSearchParams(window.location.search);
 const newsId = params.get('id');
-
 let db, appId;
-
 try {
-    let firebaseConfig;
-    appId = typeof __app_id !== 'undefined' ? __app_id : 'partnerflux';
-
-    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        firebaseConfig = JSON.parse(__firebase_config);
-    } 
-    else if (import.meta.env && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-        firebaseConfig = { 
-            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-            appId: import.meta.env.VITE_FIREBASE_APP_ID,
-        };
-    } 
-    else {
-        throw new Error("Firebaseのバックエンド設定を読み込めませんでした。");
-    }
-
+    if (typeof firebaseConfig === 'undefined') { throw new Error("埋め込まれたFirebase設定が見つかりませんでした。"); }
     const app = initializeApp(firebaseConfig);
     db = getFirestore(app);
+    appId = 'partnerflux';
     const auth = getAuth(app);
-    
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            fetchNewsDetail();
-        } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err));
-        } else {
-            signInAnonymously(auth).catch(err => console.error(err));
-        }
+        if (user) { fetchNewsDetail(); }
+        else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err)); }
+        else { signInAnonymously(auth).catch(err => console.error(err)); }
     });
 } catch(error) {
     console.error(error);
     mainContent.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
 }
-
 async function fetchNewsDetail() {
     if (!newsId) { 
         mainContent.innerHTML = `<p class="text-center text-red-500">記事IDが指定されていません。</p>`;
@@ -112,19 +91,15 @@ async function fetchNewsDetail() {
         const collectionPath = `artifacts/${appId}/public/data/news`;
         const docRef = doc(db, collectionPath, newsId);
         const docSnap = await getDoc(docRef);
-
         if (!docSnap.exists()) { throw new Error('指定された記事が見つかりません。'); }
-        
         const news = {id: docSnap.id, ...docSnap.data()};
-        document.title = `${news.title || 'ニュース詳細'} - PartnerFlux`; // タイトルを動的に設定
+        document.title = `${news.title || 'ニュース詳細'} - PartnerFlux`;
         displayNews(news);
-
     } catch (error) {
         console.error("データ取得エラー:", error);
         mainContent.innerHTML = `<p class="text-center text-red-500">データの読み込みに失敗しました: ${error.message}</p>`;
     }
 }
-
 function formatAnalysisText(text) {
     if (!text) return '';
     const sanitizer = document.createElement('div');
@@ -132,17 +107,11 @@ function formatAnalysisText(text) {
     const sanitizedText = sanitizer.innerHTML;
     return sanitizedText.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-800 bg-yellow-200 px-1 rounded">$1</strong>');
 }
-
 function displayNews(news) {
     loadingIndicator.style.display = 'none';
-
-    const displayDate = (news.publicationDate && news.publicationDate !== '不明')
-        ? news.publicationDate
-        : (news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
-    
+    const displayDate = news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
     const isFunding = news.category === 'funding';
     let contentHtml = '';
-
     if (isFunding) {
         contentHtml = `
         <div class="content-section rounded-xl shadow-xl overflow-hidden p-8 md:p-12">
@@ -190,7 +159,6 @@ function displayNews(news) {
             <section class="mb-6"><h3 class="text-xl font-semibold section-title mb-4">将来の見立て</h3><div class="analysis-text">${formatAnalysisText(news.futureOutlook || '')}</div></section>
         `;
     }
-
     const listPageUrl = isFunding ? '/funding-list.html' : '/alliance-list.html';
     contentHtml += `
             <div class="mt-12">
@@ -203,7 +171,6 @@ function displayNews(news) {
             </div>
         </div> 
     `;
-    
     mainContent.innerHTML = contentHtml;
 }
 </script>

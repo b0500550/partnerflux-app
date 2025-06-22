@@ -2,6 +2,17 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <script>
+      const firebaseConfig = {
+        apiKey: "AIzaSyDOHbwN4r3ykGu5VlC2hErpNUNPXFjja4E",
+        authDomain: "partnerflux.firebaseapp.com",
+        projectId: "partnerflux",
+        storageBucket: "partnerflux.firebasestorage.app",
+        messagingSenderId: "897391136072",
+        appId: "1:897391136072:web:dd928318965cdbd808b77d",
+        measurementId: "G-6DQ8KBXVM0"
+      };
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>お問い合わせ - PartnerFlux</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -25,14 +36,12 @@
     </style>
 </head>
 <body class="text-gray-800">
-
     <header class="header-section shadow-sm">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <a href="/" class="logo-container"><img src="/logo.jpg" alt="PartnerFlux Logo" class="h-24"></a>
             <nav><a href="/" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">トップへ戻る</a></nav>
         </div>
     </header>
-
     <main>
         <div class="content-container">
             <h1>お問い合わせ</h1>
@@ -40,7 +49,6 @@
                 PartnerFluxに関するご意見、ご感想、ご要望などをお寄せください。<br>
                 返信が必要な場合は、メールアドレスをご記入ください。
             </p>
-
             <form id="contactForm">
                 <div>
                     <label for="email" class="form-label">メールアドレス (任意)</label>
@@ -57,7 +65,6 @@
             <div id="messageArea" class="message-area"></div>
         </div>
     </main>
-    
     <footer class="bg-gray-900 text-gray-400 mt-16">
         <div class="container mx-auto px-6 py-8">
             <div class="flex justify-center space-x-6 mb-6">
@@ -69,70 +76,42 @@
             <p class="text-center text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p>
         </div>
     </footer>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getFirestore, collection, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
     import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
     const contactForm = document.getElementById('contactForm');
     const submitButton = document.getElementById('submitButton');
     const messageArea = document.getElementById('messageArea');
-
     let db, appId, auth;
-
     try {
-        let firebaseConfig;
-        appId = typeof __app_id !== 'undefined' ? __app_id : 'partnerflux';
-
-        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-            firebaseConfig = JSON.parse(__firebase_config);
-        } else if (import.meta.env && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-            firebaseConfig = { 
-                apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-                authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-                projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-                storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-                messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-                appId: import.meta.env.VITE_FIREBASE_APP_ID,
-            };
-        } else {
-            throw new Error("Firebaseのバックエンド設定を読み込めませんでした。");
-        }
-
+        if (typeof firebaseConfig === 'undefined') { throw new Error("埋め込まれたFirebase設定が見つかりませんでした。"); }
         const app = initializeApp(firebaseConfig);
         db = getFirestore(app);
         auth = getAuth(app);
-
+        appId = 'partnerflux';
         onAuthStateChanged(auth, (user) => {
             if (!user) {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err));
-                } else {
-                    signInAnonymously(auth).catch(err => console.error(err));
-                }
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err)); }
+                else { signInAnonymously(auth).catch(err => console.error(err)); }
             }
         });
     } catch(error) {
         console.error(error);
         displayMessage("ページの初期化に失敗しました。", true);
     }
-
     contactForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         submitButton.disabled = true;
         submitButton.textContent = '送信中...';
-
         const email = document.getElementById('email').value.trim();
         const comment = document.getElementById('comment').value.trim();
-
         if (!comment) {
             displayMessage('お問い合わせ内容を入力してください。', true);
             submitButton.disabled = false;
             submitButton.textContent = '送信する';
             return;
         }
-
         try {
             const inquiriesCollectionPath = `artifacts/${appId}/public/data/inquiries`;
             await addDoc(collection(db, inquiriesCollectionPath), {
@@ -141,10 +120,8 @@
                 createdAt: Timestamp.now(),
                 status: 'new'
             });
-
             displayMessage('ご意見ありがとうございます。正常に送信されました。', false);
             contactForm.reset();
-
         } catch (error) {
             console.error("Error sending inquiry: ", error);
             displayMessage('送信に失敗しました。時間をおいて再度お試しください。', true);
@@ -153,7 +130,6 @@
             submitButton.textContent = '送信する';
         }
     });
-
     function displayMessage(message, isError = false) {
         messageArea.textContent = message;
         messageArea.className = 'message-area';
@@ -161,6 +137,5 @@
         messageArea.classList.add(isError ? 'message-error' : 'message-success');
     }
 </script>
-
 </body>
 </html>

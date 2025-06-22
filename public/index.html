@@ -2,11 +2,22 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <script>
+      // Firebase設定情報を直接埋め込み
+      const firebaseConfig = {
+        apiKey: "AIzaSyDOHbwN4r3ykGu5VlC2hErpNUNPXFjja4E",
+        authDomain: "partnerflux.firebaseapp.com",
+        projectId: "partnerflux",
+        storageBucket: "partnerflux.firebasestorage.app",
+        messagingSenderId: "897391136072",
+        appId: "1:897391136072:web:dd928318965cdbd808b77d",
+        measurementId: "G-6DQ8KBXVM0"
+      };
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PartnerFlux - スタートアップ情報サイト</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/lucide-react/0.395.0/umd/lucide-react.min.js">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8f9fa; }
         .header-section { background-color: #ffffff; border-bottom: 1px solid #e5e7eb; }
@@ -20,7 +31,6 @@
     </style>
 </head>
 <body class="text-gray-800">
-
     <header class="header-section shadow-sm sticky top-0 z-50">
         <div class="container mx-auto px-6 py-4 flex justify-between items-center">
             <div class="logo-container">
@@ -28,9 +38,7 @@
             </div>
         </div>
     </header>
-
     <main class="container mx-auto px-6 py-12">
-
         <section class="mb-16 p-8 rounded-xl shadow-lg bg-white">
             <h2 class="text-3xl font-semibold news-header mb-6">PartnerFluxとは</h2>
             <div class="text-gray-700 leading-relaxed text-lg">
@@ -38,7 +46,6 @@
                 <p>情報の裏に潜むドラマをAIとプロVCが読み解き、ポジティブ・ネガティブ両面で鋭く分析。あなたの次の意思決定を0.5秒短縮します。</p>
             </div>
         </section>
-
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
             <a href="/funding-list.html" class="nav-button p-6 rounded-lg shadow-md text-center transition-transform transform hover:scale-105 duration-300 ease-in-out flex flex-col items-center justify-center h-48">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trending-up h-12 w-12 mb-3"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -61,7 +68,6 @@
                 <p class="text-sm opacity-80">Database (Coming Soon)</p>
             </a>
         </section>
-
         <section class="bg-white p-8 rounded-xl shadow-lg">
             <h2 class="text-3xl font-semibold news-header mb-6">Recent News</h2>
             <div class="overflow-x-auto">
@@ -83,8 +89,6 @@
             </div>
         </section>
     </main>
-
-    <!-- ★★★ ここからが修正箇所です ★★★ -->
     <footer class="bg-gray-900 text-gray-400 mt-16">
         <div class="container mx-auto px-6 py-8">
             <div class="flex justify-center space-x-6 mb-6">
@@ -96,82 +100,43 @@
             <p class="text-center text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p>
         </div>
     </footer>
-
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, collection, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-
 const newsContainer = document.getElementById('recent-news-body');
-
-// ★★★ ここも修正箇所です ★★★
 try {
-    let firebaseConfig;
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'partnerflux';
-
-    if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        firebaseConfig = JSON.parse(__firebase_config);
-    } 
-    else if (import.meta.env && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-        firebaseConfig = { 
-            apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-            authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-            projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-            storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-            messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-            appId: import.meta.env.VITE_FIREBASE_APP_ID,
-        };
-    } 
-    else {
-        throw new Error("Firebaseのバックエンド設定を読み込めませんでした。");
-    }
-
+    if (typeof firebaseConfig === 'undefined') { throw new Error("埋め込まれたFirebase設定が見つかりませんでした。"); }
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
-    
+    const appId = 'partnerflux';
     onAuthStateChanged(auth, (user) => {
-        if (user) {
-            fetchRecentNews(db, appId);
-        } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-            signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err));
-        } else {
-            signInAnonymously(auth).catch(err => console.error(err));
-        }
+        if (user) { fetchRecentNews(db, appId); }
+        else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err)); }
+        else { signInAnonymously(auth).catch(err => console.error(err)); }
     });
-
 } catch (error) {
     console.error(error);
     newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-red-500">${error.message}</td></tr>`;
 }
-
 async function fetchRecentNews(db, appId) {
     try {
         const newsCollectionPath = `artifacts/${appId}/public/data/news`;
         const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"), limit(5));
         const querySnapshot = await getDocs(q);
-
         newsContainer.innerHTML = ''; 
         if (querySnapshot.empty) { 
             newsContainer.innerHTML = `<tr><td colspan="3" class="text-center py-10 text-gray-500">登録されているニュースがありません。</td></tr>`;
             return;
         }
-
         querySnapshot.forEach((doc) => {
             const newsItem = { id: doc.id, ...doc.data() };
-            const displayDate = (newsItem.publicationDate && newsItem.publicationDate !== '不明')
-                ? newsItem.publicationDate
-                : (newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明');
-            
+            const displayDate = newsItem.registeredAt ? new Date(newsItem.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
             let categoryTag = '';
-            if (newsItem.category === 'funding') {
-                categoryTag = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-sky-100 text-sky-700">#資金調達</span>`;
-            } else if (newsItem.category === 'alliance') {
-                categoryTag = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-700">#事業提携</span>`;
-            } else {
-                categoryTag = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-700">#その他</span>`;
-            }
-
+            if (newsItem.category === 'funding') { categoryTag = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-sky-100 text-sky-700">#資金調達</span>`; }
+            else if (newsItem.category === 'alliance') { categoryTag = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-100 text-emerald-700">#事業提携</span>`; }
+            else { categoryTag = `<span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-700">#その他</span>`; }
             const newsRowHtml = `
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap text-md text-gray-600">${displayDate}</td>

@@ -2,6 +2,18 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <script>
+      // Firebase設定情報を直接埋め込み
+      const firebaseConfig = {
+        apiKey: "AIzaSyDOHbwN4r3ykGu5VlC2hErpNUNPXFjja4E",
+        authDomain: "partnerflux.firebaseapp.com",
+        projectId: "partnerflux",
+        storageBucket: "partnerflux.firebasestorage.app",
+        messagingSenderId: "897391136072",
+        appId: "1:897391136072:web:dd928318965cdbd808b77d",
+        measurementId: "G-6DQ8KBXVM0"
+      };
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PartnerFlux 管理ページ</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -72,7 +84,6 @@
         </div>
         <div id="messageArea" class="message-area"></div>
 
-        <!-- ★★★ ここからが追加箇所 ★★★ -->
         <div class="section-container">
             <h2 class="section-title">問い合わせ一覧</h2>
             <div class="overflow-x-auto">
@@ -90,8 +101,7 @@
                 </table>
             </div>
         </div>
-        <!-- ★★★ ここまでが追加箇所 ★★★ -->
-
+        
         <div class="section-container">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="section-title !mb-0">候補ニュース一覧</h2>
@@ -202,7 +212,7 @@
         const fetchCandidatesButton = document.getElementById('fetchCandidatesButton');
         const newsListBody = document.getElementById('news-list-body');
         const candidateNewsListBody = document.getElementById('candidate-news-list-body');
-        const inquiriesListBody = document.getElementById('inquiries-list-body'); // ★★★ 追加
+        const inquiriesListBody = document.getElementById('inquiries-list-body');
         const selectAllCandidatesCheckbox = document.getElementById('select-all-candidates');
         const bulkActionContainer = document.getElementById('bulk-action-container');
         const bulkAnalyzeButton = document.getElementById('bulk-analyze-button');
@@ -214,11 +224,10 @@
 
         // State & Firebase variables
         let onConfirmCallback = null;
-        // ★★★ inquiriesCollectionPath を追加
         let auth, userId, db, newsCollectionPath, candidateNewsCollectionPath, inquiriesCollectionPath, processNewsUrl, fetchCandidateNewsUrlBase;
         let allRegisteredNews = [];
         let allCandidateNews = [];
-        let allInquiries = []; // ★★★ 追加
+        let allInquiries = [];
         let isBulkProcessing = false;
 
         // --- 初期化処理 ---
@@ -227,34 +236,17 @@
             fetchCandidatesButton.disabled = true;
 
             try {
-                let firebaseConfig;
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'partnerflux';
-
-                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                    firebaseConfig = JSON.parse(__firebase_config);
-                } 
-                else if (import.meta.env && import.meta.env.VITE_FIREBASE_PROJECT_ID) {
-                    firebaseConfig = { 
-                        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-                        authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-                        projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-                        storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-                        messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-                        appId: import.meta.env.VITE_FIREBASE_APP_ID,
-                    };
-                } 
-                else {
-                    throw new Error("Firebaseのバックエンド設定を読み込めませんでした。");
-                }
-
+                if (typeof firebaseConfig === 'undefined') { throw new Error("埋め込まれたFirebase設定が見つかりませんでした。"); }
                 const app = initializeApp(firebaseConfig);
+                const projectId = firebaseConfig.projectId;
+                const appId = 'partnerflux';
+                
                 auth = getAuth(app);
                 db = getFirestore(app);
                 
-                const projectId = firebaseConfig.projectId;
                 newsCollectionPath = `artifacts/${appId}/public/data/news`;
                 candidateNewsCollectionPath = `artifacts/${appId}/public/data/candidate_news`;
-                inquiriesCollectionPath = `artifacts/${appId}/public/data/inquiries`; // ★★★ 追加
+                inquiriesCollectionPath = `artifacts/${appId}/public/data/inquiries`;
                 processNewsUrl = `https://asia-northeast1-${projectId}.cloudfunctions.net/processNewsUrl`;
                 fetchCandidateNewsUrlBase = `https://asia-northeast1-${projectId}.cloudfunctions.net/fetchCandidateNews`;
                 
@@ -263,47 +255,20 @@
                         userId = user.uid;
                         submitButton.disabled = false;
                         fetchCandidatesButton.disabled = false;
-                        await fetchAllData(); // ★★★ 関数名を変更
+                        await fetchAllData();
                     } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await signInWithCustomToken(auth, __initial_auth_token);
                     } else {
                         await signInAnonymously(auth);
                     }
                 });
-
             } catch (error) {
                 console.error("Initialization Error:", error);
                 displayMessage(`初期化エラー: ${error.message}`, true);
             }
         })();
 
-        // --- イベントリスナー設定 ---
-        document.getElementById('addNewsForm').addEventListener('submit', handleManualAdd);
-        fetchCandidatesButton.addEventListener('click', handleFetchCandidates);
-        document.querySelectorAll('input[name="newsCategoryFilter"]').forEach(radio => radio.addEventListener('change', renderFilteredLists));
-        
-        selectAllCandidatesCheckbox.addEventListener('change', handleSelectAll);
-        candidateNewsListBody.addEventListener('change', (e) => e.target.classList.contains('candidate-checkbox') && updateBulkActionUI());
-        candidateNewsListBody.addEventListener('click', handleCandidateActions);
-        bulkAnalyzeButton.addEventListener('click', handleBulkAnalyze);
-        bulkRejectButton.addEventListener('click', handleBulkReject);
-
-        newsListBody.addEventListener('click', handleRegisteredNewsActions);
-        inquiriesListBody.addEventListener('click', handleInquiryActions); // ★★★ 追加
-
-        document.getElementById('closeModalButton').addEventListener('click', () => editModal.style.display = 'none');
-        document.getElementById('confirmCancelButton').addEventListener('click', () => confirmationModal.style.display = 'none');
-        document.getElementById('confirmActionButton').addEventListener('click', () => {
-            if (onConfirmCallback) {
-                onConfirmCallback().catch(err => displayMessage(`操作に失敗しました: ${err.message}`, true));
-            }
-            confirmationModal.style.display = 'none';
-        });
-        editNewsForm.addEventListener('submit', handleEditFormSubmit);
-
-
         // --- データ取得 & 描画 ---
-        // ★★★ fetchAllData にリネームし、問い合わせ取得を追加
         async function fetchAllData() {
             displayMessage("全データを読み込んでいます...", false);
             await Promise.all([ 
@@ -311,14 +276,14 @@
                 fetchAndStoreCandidateNews(),
                 fetchAndStoreInquiries() 
             ]);
-            renderAllLists(); // ★★★ renderAllLists を呼び出すように変更
+            renderAllLists();
             displayMessage("データの読み込みが完了しました。", false);
             setTimeout(() => { messageArea.style.display = 'none'; }, 2000);
         }
 
         async function fetchAndStoreRegisteredNews() {
             try {
-                const q = query(collection(db, newsCollectionPath), orderBy("registeredAt", "desc"));
+                const q = query(collection(db, newsCollectionPath));
                 const snapshot = await getDocs(q);
                 allRegisteredNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             } catch (error) { displayMessage("登録済みニュースの読み込みに失敗しました。", true); }
@@ -326,13 +291,12 @@
         
         async function fetchAndStoreCandidateNews() {
             try {
-                const q = query(collection(db, candidateNewsCollectionPath), orderBy("discoveredAt", "desc"));
+                const q = query(collection(db, candidateNewsCollectionPath));
                 const snapshot = await getDocs(q);
                 allCandidateNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             } catch (error) { displayMessage("候補ニュースの読み込みに失敗しました。", true); }
         }
         
-        // ★★★ 問い合わせ取得関数を追加
         async function fetchAndStoreInquiries() {
             try {
                 const q = query(collection(db, inquiriesCollectionPath), orderBy("createdAt", "desc"));
@@ -344,7 +308,6 @@
             }
         }
         
-        // ★★★ ニュースのフィルタリングと問い合わせ描画を分離
         function renderAllLists() {
             renderFilteredLists();
             renderInquiriesList();
@@ -354,7 +317,13 @@
             const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
             newsListBody.innerHTML = '';
             const filteredRegistered = allRegisteredNews.filter(news => news.category === selectedCategory);
+            
             if (filteredRegistered.length > 0) {
+                filteredRegistered.sort((a, b) => {
+                    const timeA = a.registeredAt ? a.registeredAt.seconds : 0;
+                    const timeB = b.registeredAt ? b.registeredAt.seconds : 0;
+                    return timeB - timeA;
+                });
                 filteredRegistered.forEach(renderRegisteredNewsRow);
             } else {
                 newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">このカテゴリの登録済みニュースはありません。</td></tr>`;
@@ -362,7 +331,13 @@
             
             candidateNewsListBody.innerHTML = '';
             const filteredCandidates = allCandidateNews.filter(news => news.category === selectedCategory);
+
             if (filteredCandidates.length > 0) {
+                filteredCandidates.sort((a, b) => {
+                    const timeA = a.discoveredAt ? a.discoveredAt.seconds : 0;
+                    const timeB = b.discoveredAt ? b.discoveredAt.seconds : 0;
+                    return timeB - timeA;
+                });
                 filteredCandidates.forEach(renderCandidateNewsRow);
             } else {
                 candidateNewsListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">このカテゴリの候補ニュースはありません。</td></tr>`;
@@ -397,7 +372,6 @@
             candidateNewsListBody.insertAdjacentHTML('beforeend', row);
         }
         
-        // ★★★ 問い合わせリスト描画関数を追加
         function renderInquiriesList() {
             inquiriesListBody.innerHTML = '';
             if (allInquiries.length > 0) {
@@ -407,7 +381,6 @@
             }
         }
 
-        // ★★★ 問い合わせ一行の描画関数を追加
         function renderInquiryRow(inquiry) {
             const date = inquiry.createdAt ? new Date(inquiry.createdAt.seconds * 1000).toLocaleString('ja-JP') : '日時不明';
             const email = inquiry.email || '（記載なし）';
@@ -426,7 +399,29 @@
             inquiriesListBody.insertAdjacentHTML('beforeend', row);
         }
 
-        // --- イベントハンドラ ---
+        document.getElementById('addNewsForm').addEventListener('submit', handleManualAdd);
+        fetchCandidatesButton.addEventListener('click', handleFetchCandidates);
+        document.querySelectorAll('input[name="newsCategoryFilter"]').forEach(radio => radio.addEventListener('change', renderFilteredLists));
+        
+        selectAllCandidatesCheckbox.addEventListener('change', handleSelectAll);
+        candidateNewsListBody.addEventListener('change', (e) => e.target.classList.contains('candidate-checkbox') && updateBulkActionUI());
+        candidateNewsListBody.addEventListener('click', handleCandidateActions);
+        bulkAnalyzeButton.addEventListener('click', handleBulkAnalyze);
+        bulkRejectButton.addEventListener('click', handleBulkReject);
+
+        newsListBody.addEventListener('click', handleRegisteredNewsActions);
+        inquiriesListBody.addEventListener('click', handleInquiryActions);
+
+        document.getElementById('closeModalButton').addEventListener('click', () => editModal.style.display = 'none');
+        document.getElementById('confirmCancelButton').addEventListener('click', () => confirmationModal.style.display = 'none');
+        document.getElementById('confirmActionButton').addEventListener('click', () => {
+            if (onConfirmCallback) {
+                onConfirmCallback().catch(err => displayMessage(`操作に失敗しました: ${err.message}`, true));
+            }
+            confirmationModal.style.display = 'none';
+        });
+        editNewsForm.addEventListener('submit', handleEditFormSubmit);
+
         async function handleFetchCandidates() {
              const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
              displayMessage(`${selectedCategory === 'funding' ? '資金調達' : '事業提携'}の候補ニュースを取得中です...`, false);
@@ -436,7 +431,10 @@
                  const response = await fetch(functionUrl);
                  const result = await response.json();
                  if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
+                 
                  displayMessage(result.message, false);
+                 await new Promise(resolve => setTimeout(resolve, 2000));
+
                  await fetchAndStoreCandidateNews();
                  renderFilteredLists();
              } catch(error) {
@@ -490,8 +488,7 @@
                 });
             }
         }
-
-        // ★★★ 問い合わせアクションのハンドラを追加
+        
         async function handleInquiryActions(event) {
             const target = event.target;
             if (target.classList.contains('delete-inquiry-button')) {
@@ -586,6 +583,7 @@
                 if (!isBulkProcessing) {
                     displayMessage(`「${result.data.title}」を登録しました。`, false);
                     if (candidateId) await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     await fetchAllData(); 
                 } else if (candidateId) {
                     await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
@@ -606,7 +604,6 @@
              messageArea.classList.add(isError ? 'message-error' : 'message-success');
         }
 
-        // --- モーダル関連の関数 ---
         function showConfirmationModal(message, callback) {
             onConfirmCallback = callback;
             confirmationModal.querySelector('#confirmationMessage').textContent = message;
