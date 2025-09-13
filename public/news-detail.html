@@ -50,6 +50,7 @@
                 <a href="/" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">トップ</a>
                 <a href="/funding-list.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">資金調達一覧</a>
                 <a href="/alliance-list.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">事業提携一覧</a>
+                <a href="/vc-news-list.html" class="text-gray-600 hover:text-blue-700 px-3 py-2 rounded-md text-sm font-medium">VC動向一覧</a>
             </nav>
         </div>
     </header>
@@ -67,15 +68,17 @@
             <p class="text-center text-sm">&copy; 2025 PartnerFlux. All rights reserved.</p>
         </div>
     </footer>
-<script type="module">
+<script type="module" id="main-script-v2">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
 const mainContent = document.getElementById('main-content');
 const loadingIndicator = document.getElementById('loading');
 const params = new URLSearchParams(window.location.search);
 const newsId = params.get('id');
 let db, appId;
+
 try {
     if (typeof firebaseConfig === 'undefined') { throw new Error("埋め込まれたFirebase設定が見つかりませんでした。"); }
     const app = initializeApp(firebaseConfig);
@@ -83,14 +86,19 @@ try {
     appId = 'partnerflux';
     const auth = getAuth(app);
     onAuthStateChanged(auth, (user) => {
-        if (user) { fetchNewsDetail(); }
-        else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err)); }
-        else { signInAnonymously(auth).catch(err => console.error(err)); }
+        if (user) { 
+            fetchNewsDetail(); 
+        } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) { 
+            signInWithCustomToken(auth, __initial_auth_token).catch(err => console.error(err)); 
+        } else { 
+            signInAnonymously(auth).catch(err => console.error(err)); 
+        }
     });
 } catch(error) {
     console.error(error);
     mainContent.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
 }
+
 async function fetchNewsDetail() {
     if (!newsId) { 
         mainContent.innerHTML = `<p class="text-center text-red-500">記事IDが指定されていません。</p>`;
@@ -109,6 +117,7 @@ async function fetchNewsDetail() {
         mainContent.innerHTML = `<p class="text-center text-red-500">データの読み込みに失敗しました: ${error.message}</p>`;
     }
 }
+
 function formatAnalysisText(text) {
     if (!text) return '';
     const sanitizer = document.createElement('div');
@@ -116,17 +125,23 @@ function formatAnalysisText(text) {
     const sanitizedText = sanitizer.innerHTML;
     return sanitizedText.replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-800 bg-yellow-200 px-1 rounded">$1</strong>');
 }
+
 function displayNews(news) {
     loadingIndicator.style.display = 'none';
     const displayDate = news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
+    
     const isFunding = news.category === 'funding';
+    const isAlliance = news.category === 'alliance';
+    const isVcNews = news.category === 'vc_news';
+
     let contentHtml = '';
+
     if (isFunding) {
         contentHtml = `
         <div class="content-section rounded-xl shadow-xl overflow-hidden p-8 md:p-12">
             <div class="mb-8 pb-6 border-b border-gray-200">
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">${news.title || ''}</h1>
-                <p class="text-md text-gray-500">公開日: ${displayDate}</p>
+                <p class="text-md text-gray-500">公開日: ${news.publicationDate || displayDate}</p>
             </div>
             <div class="flex flex-col md:flex-row items-start md:items-center mb-10">
                 <div class="startup-icon-placeholder-large mr-0 md:mr-6 mb-4 md:mb-0 flex-shrink-0"><span>💡</span></div>
@@ -148,12 +163,12 @@ function displayNews(news) {
             <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">VC視点のリスクアラート</h3><div class="analysis-text">${formatAnalysisText(news.negativeAnalysis || '')}</div></section>
             <section class="mb-6"><h3 class="text-xl font-semibold section-title mb-4">VCが見るExitスコープ</h3><div class="analysis-text">${formatAnalysisText(news.exitOutlook || '')}</div></section>
         `;
-    } else {
+    } else if (isAlliance) {
         contentHtml = `
         <div class="content-section rounded-xl shadow-xl overflow-hidden p-8 md:p-12">
             <div class="mb-8 pb-6 border-b border-gray-200">
                 <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">${news.title || ''}</h1>
-                <p class="text-md text-gray-500">発表日: ${displayDate}</p>
+                <p class="text-md text-gray-500">発表日: ${news.publicationDate || displayDate}</p>
             </div>
             <div class="flex flex-col md:flex-row items-start md:items-center mb-10">
                 <div class="startup-icon-placeholder-large mr-0 md:mr-6 mb-4 md:mb-0 flex-shrink-0"><span>🤝</span></div>
@@ -167,8 +182,38 @@ function displayNews(news) {
             <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">リスク分析</h3><div class="analysis-text">${formatAnalysisText(news.riskAnalysis || '')}</div></section>
             <section class="mb-6"><h3 class="text-xl font-semibold section-title mb-4">将来の見立て</h3><div class="analysis-text">${formatAnalysisText(news.futureOutlook || '')}</div></section>
         `;
+    } else if (isVcNews) {
+        contentHtml = `
+        <div class="content-section rounded-xl shadow-xl overflow-hidden p-8 md:p-12">
+            <div class="mb-8 pb-6 border-b border-gray-200">
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-3">${news.title || ''}</h1>
+                <p class="text-md text-gray-500">公開日: ${news.publicationDate || displayDate}</p>
+            </div>
+            <div class="flex flex-col md:flex-row items-start md:items-center mb-10">
+                <div class="startup-icon-placeholder-large mr-0 md:mr-6 mb-4 md:mb-0 flex-shrink-0"><span>📈</span></div>
+                <div>
+                     <div class="flex items-center space-x-3">
+                        <h2 class="text-2xl font-semibold text-gray-800">${news.startupName || ''}</h2>
+                        <a href="https://www.google.com/search?q=${encodeURIComponent(news.startupName)}" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-600 hover:underline font-light">ファンド情報</a>
+                    </div>
+                    <p class="text-gray-600 mt-1">${news.businessDescription || ''}</p>
+                </div>
+            </div>
+             <div class="info-grid mb-10">
+                <div class="info-item"><span class="info-label">ファンド金額</span><p class="info-value">${news.fundingAmount || '不明'}</p></div>
+            </div>
+            <section class="mb-10 highlight-section"><h3 class="text-xl font-semibold section-title mb-4">ファンドのサマリ</h3><div class="analysis-text">${formatAnalysisText(news.summary || '')}</div></section>
+            <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">成長仮説（LP投資家視点）</h3><div class="analysis-text">${formatAnalysisText(news.positiveAnalysis || '')}</div></section>
+            <section class="mb-10"><h3 class="text-xl font-semibold section-title mb-4">潜在的懸念（LP投資家視点）</h3><div class="analysis-text">${formatAnalysisText(news.negativeAnalysis || '')}</div></section>
+            <section class="mb-6"><h3 class="text-xl font-semibold section-title mb-4">LP投資家からの評価スコープ</h3><div class="analysis-text">${formatAnalysisText(news.LPOutlook || '')}</div></section>
+        `;
     }
-    const listPageUrl = isFunding ? '/funding-list.html' : '/alliance-list.html';
+
+    let listPageUrl = '/';
+    if (isFunding) listPageUrl = '/funding-list.html';
+    if (isAlliance) listPageUrl = '/alliance-list.html';
+    if (isVcNews) listPageUrl = '/vc-news-list.html';
+    
     contentHtml += `
             <div class="mt-12">
                 <div class="text-right mb-4">
@@ -185,3 +230,4 @@ function displayNews(news) {
 </script>
 </body>
 </html>
+

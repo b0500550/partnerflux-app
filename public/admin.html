@@ -10,7 +10,6 @@
     </script>
     <meta charset="UTF-8">
     <script>
-      // Firebase設定情報を直接埋め込み
       const firebaseConfig = {
         apiKey: "AIzaSyDOHbwN4r3ykGu5VlC2hErpNUNPXFjja4E",
         authDomain: "partnerflux.firebaseapp.com",
@@ -33,8 +32,8 @@
         .section-container { margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e5e7eb;}
         .section-title { font-size: 1.5rem; font-weight: 600; color: #343a40; margin-bottom: 1.5rem; }
         .form-label { display: block; margin-bottom: 8px; font-weight: 500; color: #495057; }
-        .form-input, .edit-form-textarea, .form-textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; margin-bottom: 15px; transition: border-color 0.2s, box-shadow 0.2s; }
-        .form-input:focus, .edit-form-textarea:focus, .form-textarea:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); outline: none;}
+        .form-input, .form-textarea, .edit-form-textarea { width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; margin-bottom: 15px; transition: border-color 0.2s, box-shadow 0.2s; }
+        .form-input:focus, .form-textarea:focus, .edit-form-textarea:focus { border-color: #007bff; box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25); outline: none;}
         .btn { padding: 10px 20px; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; transition: all 0.2s; font-weight: 500; }
         .btn-primary { background-color: #007bff; color: white; }
         .btn-primary:hover { background-color: #0056b3; }
@@ -59,7 +58,7 @@
         .modal-title { font-size: 1.5rem; font-weight: 600; }
         .close-button { font-size: 1.5rem; cursor: pointer; border: none; background: none; }
         .category-selection legend { font-weight: 500; color: #495057; margin-bottom: 0.75rem; font-size:1rem; }
-        .category-selection div { display: flex; gap: 1rem; }
+        .category-selection div { display: flex; flex-wrap: wrap; gap: 1rem; }
         .category-selection label { display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; border: 1px solid #ced4da; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
         .category-selection input[type="radio"] { display: none; }
         .category-selection input[type="radio"]:checked + label { background-color: #007bff; color: white; border-color: #007bff; box-shadow: 0 0 5px rgba(0,123,255,0.5); }
@@ -77,6 +76,8 @@
                 <label for="category-funding-filter">資金調達</label>
                 <input type="radio" id="category-alliance-filter" name="newsCategoryFilter" value="alliance">
                 <label for="category-alliance-filter">事業提携</label>
+                <input type="radio" id="category-vc_news-filter" name="newsCategoryFilter" value="vc_news">
+                <label for="category-vc_news-filter">VC動向</label>
             </div>
         </fieldset>
 
@@ -85,9 +86,10 @@
             <form id="addNewsForm">
                 <div>
                     <label for="newsUrls" class="form-label">ニュース記事URL (改行で区切って複数入力可):</label>
-                    <textarea id="newsUrls" name="newsUrls" class="form-textarea" rows="5" placeholder="https://example.com/news/article1&#10;https://example.com/news/article2" required></textarea>
+                    <textarea id="newsUrls" name="newsUrls" class="form-textarea" rows="5" placeholder="https://example.com/news/article1\nhttps://example.com/news/article2" required></textarea>
                 </div>
                 <button type="submit" id="submitButton" class="btn btn-primary">一括で記事を登録・分析</button>
+                <div id="processingIndicator" class="processing-indicator"></div>
             </form>
         </div>
         <div id="messageArea" class="message-area"></div>
@@ -194,6 +196,18 @@
                     <div><label for="editRiskAnalysis" class="form-label">リスク分析</label><textarea id="editRiskAnalysis" class="edit-form-textarea" rows="5"></textarea></div>
                     <div><label for="editFutureOutlook" class="form-label">将来の見立て</label><textarea id="editFutureOutlook" class="edit-form-textarea" rows="5"></textarea></div>
                 </div>
+                 <div id="vc_news-fields" style="display: none;">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label for="editVcNewsTitle" class="form-label">タイトル</label><input type="text" id="editVcNewsTitle" class="form-input"></div>
+                        <div><label for="editVcNewsStartupName" class="form-label">ファンド名</label><input type="text" id="editVcNewsStartupName" class="form-input"></div>
+                    </div>
+                    <div><label for="editVcNewsBusinessDescription" class="form-label">概要</label><input type="text" id="editVcNewsBusinessDescription" class="form-input"></div>
+                    <div><label for="editVcNewsFundingAmount" class="form-label">ファンド金額</label><input type="text" id="editVcNewsFundingAmount" class="form-input"></div>
+                    <div><label for="editVcNewsSummary" class="form-label">サマリ</label><textarea id="editVcNewsSummary" class="edit-form-textarea" rows="5"></textarea></div>
+                    <div><label for="editVcNewsPositiveAnalysis" class="form-label">成長仮説(LP投資家視点)</label><textarea id="editVcNewsPositiveAnalysis" class="edit-form-textarea" rows="5"></textarea></div>
+                    <div><label for="editVcNewsNegativeAnalysis" class="form-label">潜在的懸念(LP投資家視点)</label><textarea id="editVcNewsNegativeAnalysis" class="edit-form-textarea" rows="5"></textarea></div>
+                    <div><label for="editVcNewsLPOutlook" class="form-label">LP投資家からの評価スコープ</label><textarea id="editVcNewsLPOutlook" class="edit-form-textarea" rows="5"></textarea></div>
+                </div>
                 <div class="text-right mt-4"><button type="submit" class="btn btn-primary">変更を保存</button></div>
             </form>
         </div>
@@ -209,546 +223,583 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getFirestore, collection, query, getDocs, doc, deleteDoc, getDoc, updateDoc, orderBy, writeBatch, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // DOM Elements
-        const messageArea = document.getElementById('messageArea');
-        const submitButton = document.getElementById('submitButton');
-        const fetchCandidatesButton = document.getElementById('fetchCandidatesButton');
-        const newsListBody = document.getElementById('news-list-body');
-        const candidateNewsListBody = document.getElementById('candidate-news-list-body');
-        const inquiriesListBody = document.getElementById('inquiries-list-body');
-        const selectAllCandidatesCheckbox = document.getElementById('select-all-candidates');
-        const bulkActionContainer = document.getElementById('bulk-action-container');
-        const bulkAnalyzeButton = document.getElementById('bulk-analyze-button');
-        const bulkRejectButton = document.getElementById('bulk-reject-button');
-        const selectionCounter = document.getElementById('selection-counter');
-        const editModal = document.getElementById('editModal');
-        const editNewsForm = document.getElementById('editNewsForm');
-        const confirmationModal = document.getElementById('confirmationModal');
+    const messageArea = document.getElementById('messageArea');
+    const submitButton = document.getElementById('submitButton');
+    const fetchCandidatesButton = document.getElementById('fetchCandidatesButton');
+    const newsListBody = document.getElementById('news-list-body');
+    const candidateNewsListBody = document.getElementById('candidate-news-list-body');
+    const inquiriesListBody = document.getElementById('inquiries-list-body');
+    const selectAllCandidatesCheckbox = document.getElementById('select-all-candidates');
+    const bulkActionContainer = document.getElementById('bulk-action-container');
+    const bulkAnalyzeButton = document.getElementById('bulk-analyze-button');
+    const bulkRejectButton = document.getElementById('bulk-reject-button');
+    const selectionCounter = document.getElementById('selection-counter');
+    const editModal = document.getElementById('editModal');
+    const editNewsForm = document.getElementById('editNewsForm');
+    const confirmationModal = document.getElementById('confirmationModal');
 
-        // State & Firebase variables
-        let onConfirmCallback = null;
-        let auth, userId, db, newsCollectionPath, candidateNewsCollectionPath, inquiriesCollectionPath, processNewsUrl, fetchCandidateNewsUrlBase;
-        let allRegisteredNews = [];
-        let allCandidateNews = [];
-        let allInquiries = [];
-        let isBulkProcessing = false;
+    let onConfirmCallback = null;
+    let auth, userId, db, newsCollectionPath, candidateNewsCollectionPath, inquiriesCollectionPath, processNewsUrl, fetchCandidateNewsUrlBase;
+    let allRegisteredNews = [];
+    let allCandidateNews = [];
+    let allInquiries = [];
+    let isBulkProcessing = false;
 
-        // --- 初期化処理 ---
-        (async () => {
-            submitButton.disabled = true;
-            fetchCandidatesButton.disabled = true;
+    (async () => {
+        submitButton.disabled = true;
+        fetchCandidatesButton.disabled = true;
 
-            try {
-                if (typeof firebaseConfig === 'undefined') { throw new Error("埋め込まれたFirebase設定が見つかりませんでした。"); }
-                const app = initializeApp(firebaseConfig);
-                const projectId = firebaseConfig.projectId;
-                const appId = 'partnerflux';
-                
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                newsCollectionPath = `artifacts/${appId}/public/data/news`;
-                candidateNewsCollectionPath = `artifacts/${appId}/public/data/candidate_news`;
-                inquiriesCollectionPath = `artifacts/${appId}/public/data/inquiries`;
-                processNewsUrl = `https://asia-northeast1-${projectId}.cloudfunctions.net/processNewsUrl`;
-                fetchCandidateNewsUrlBase = `https://asia-northeast1-${projectId}.cloudfunctions.net/fetchCandidateNews`;
-                
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        userId = user.uid;
-                        submitButton.disabled = false;
-                        fetchCandidatesButton.disabled = false;
-                        await fetchAllData();
-                    } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                });
-            } catch (error) {
-                console.error("Initialization Error:", error);
-                displayMessage(`初期化エラー: ${error.message}`, true);
-            }
-        })();
-
-        // --- データ取得 & 描画 ---
-        async function fetchAllData() {
-            displayMessage("全データを読み込んでいます...", false);
-            await Promise.all([
-                fetchAndStoreRegisteredNews(),
-                fetchAndStoreCandidateNews(),
-                fetchAndStoreInquiries()
-            ]);
-            renderAllLists();
-            displayMessage("データの読み込みが完了しました。", false);
-            setTimeout(() => { messageArea.style.display = 'none'; }, 2000);
-        }
-
-        async function fetchAndStoreRegisteredNews() {
-            try {
-                const q = query(collection(db, newsCollectionPath));
-                const snapshot = await getDocs(q);
-                allRegisteredNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            } catch (error) { displayMessage("登録済みニュースの読み込みに失敗しました。", true); }
-        }
-        
-        async function fetchAndStoreCandidateNews() {
-            try {
-                const q = query(collection(db, candidateNewsCollectionPath));
-                const snapshot = await getDocs(q);
-                allCandidateNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            } catch (error) { displayMessage("候補ニュースの読み込みに失敗しました。", true); }
-        }
-        
-        async function fetchAndStoreInquiries() {
-            try {
-                const q = query(collection(db, inquiriesCollectionPath), orderBy("createdAt", "desc"));
-                const snapshot = await getDocs(q);
-                allInquiries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            } catch (error) {
-                console.error("Error fetching inquiries:", error);
-                displayMessage("問い合わせの読み込みに失敗しました。", true);
-            }
-        }
-        
-        function renderAllLists() {
-            renderFilteredLists();
-            renderInquiriesList();
-        }
-        
-        function renderFilteredLists() {
-            const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
-            newsListBody.innerHTML = '';
-            const filteredRegistered = allRegisteredNews.filter(news => news.category === selectedCategory);
+        try {
+            if (typeof firebaseConfig === 'undefined') { throw new Error("埋め込まれたFirebase設定が見つかりませんでした。"); }
+            const app = initializeApp(firebaseConfig);
+            const projectId = firebaseConfig.projectId;
+            const appId = 'partnerflux';
             
-            if (filteredRegistered.length > 0) {
-                filteredRegistered.sort((a, b) => {
-                    const timeA = a.registeredAt ? a.registeredAt.seconds : 0;
-                    const timeB = b.registeredAt ? b.registeredAt.seconds : 0;
-                    return timeB - timeA;
-                });
-                filteredRegistered.forEach(renderRegisteredNewsRow);
-            } else {
-                newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">このカテゴリの登録済みニュースはありません。</td></tr>`;
-            }
+            auth = getAuth(app);
+            db = getFirestore(app);
             
-            candidateNewsListBody.innerHTML = '';
-            const filteredCandidates = allCandidateNews.filter(news => news.category === selectedCategory);
+            newsCollectionPath = `artifacts/${appId}/public/data/news`;
+            candidateNewsCollectionPath = `artifacts/${appId}/public/data/candidate_news`;
+            inquiriesCollectionPath = `artifacts/${appId}/public/data/inquiries`;
+            processNewsUrl = `https://asia-northeast1-${projectId}.cloudfunctions.net/processNewsUrl`;
+            fetchCandidateNewsUrlBase = `https://asia-northeast1-${projectId}.cloudfunctions.net/fetchCandidateNews`;
+            
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    userId = user.uid;
+                    submitButton.disabled = false;
+                    fetchCandidatesButton.disabled = false;
+                    await fetchAllData();
+                } else if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            });
+        } catch (error) {
+            console.error("Initialization Error:", error);
+            displayMessage(`初期化エラー: ${error.message}`, true);
+        }
+    })();
 
-            if (filteredCandidates.length > 0) {
-                filteredCandidates.sort((a, b) => {
-                    const timeA = a.discoveredAt ? a.discoveredAt.seconds : 0;
-                    const timeB = b.discoveredAt ? b.discoveredAt.seconds : 0;
-                    return timeB - timeA;
-                });
-                filteredCandidates.forEach(renderCandidateNewsRow);
-            } else {
-                candidateNewsListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">このカテゴリの候補ニュースはありません。</td></tr>`;
-            }
+    async function fetchAllData() {
+        displayMessage("全データを読み込んでいます...", false);
+        await Promise.all([
+            fetchAndStoreRegisteredNews(),
+            fetchAndStoreCandidateNews(),
+            fetchAndStoreInquiries()
+        ]);
+        renderAllLists();
+        displayMessage("データの読み込みが完了しました。", false);
+        setTimeout(() => { messageArea.style.display = 'none'; }, 2000);
+    }
 
-            updateBulkActionUI();
+    async function fetchAndStoreRegisteredNews() {
+        try {
+            const q = query(collection(db, newsCollectionPath));
+            const snapshot = await getDocs(q);
+            allRegisteredNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) { displayMessage("登録済みニュースの読み込みに失敗しました。", true); }
+    }
+    
+    async function fetchAndStoreCandidateNews() {
+        try {
+            const q = query(collection(db, candidateNewsCollectionPath));
+            const snapshot = await getDocs(q);
+            allCandidateNews = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) { displayMessage("候補ニュースの読み込みに失敗しました。", true); }
+    }
+    
+    async function fetchAndStoreInquiries() {
+        try {
+            const q = query(collection(db, inquiriesCollectionPath), orderBy("createdAt", "desc"));
+            const snapshot = await getDocs(q);
+            allInquiries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+            console.error("Error fetching inquiries:", error);
+            displayMessage("問い合わせの読み込みに失敗しました。", true);
+        }
+    }
+    
+    function renderAllLists() {
+        renderFilteredLists();
+        renderInquiriesList();
+    }
+    
+    function renderFilteredLists() {
+        const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
+        newsListBody.innerHTML = '';
+        const filteredRegistered = allRegisteredNews.filter(news => news.category === selectedCategory);
+        
+        if (filteredRegistered.length > 0) {
+            filteredRegistered.sort((a, b) => {
+                const timeA = a.registeredAt ? a.registeredAt.seconds : 0;
+                const timeB = b.registeredAt ? b.registeredAt.seconds : 0;
+                return timeB - timeA;
+            });
+            filteredRegistered.forEach(renderRegisteredNewsRow);
+        } else {
+            newsListBody.innerHTML = `<tr><td colspan="4" class="text-center p-4">このカテゴリの登録済みニュースはありません。</td></tr>`;
         }
         
-        function renderRegisteredNewsRow(news) {
-            const date = news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
-            const categoryText = news.category === 'funding' ? '資金調達' : '事業提携';
-            const categoryClass = news.category === 'funding' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700';
-            const row = `<tr><td>${date}</td><td><span class="px-2 py-1 text-xs font-semibold rounded-full ${categoryClass}">${categoryText}</span></td><td>${news.title || '(タイトルなし)'}</td><td class="whitespace-nowrap"><button class="btn btn-success btn-sm edit-button" data-id="${news.id}">編集</button> <button class="btn btn-danger btn-sm delete-button" data-id="${news.id}" data-title="${news.title || ''}">削除</button></td></tr>`;
-            newsListBody.insertAdjacentHTML('beforeend', row);
-        }
+        candidateNewsListBody.innerHTML = '';
+        const filteredCandidates = allCandidateNews.filter(news => news.category === selectedCategory);
 
-        function renderCandidateNewsRow(news) {
-            const date = news.discoveredAt ? new Date(news.discoveredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
-            const categoryText = news.category === 'funding' ? '資金調達' : '事業提携';
-            const categoryClass = news.category === 'funding' ? 'bg-sky-100 text-sky-700' : 'bg-emerald-100 text-emerald-700';
-            const row = `
-                <tr>
-                    <td><input type="checkbox" class="candidate-checkbox" data-id="${news.id}" data-url="${news.url}" data-category="${news.category}" data-title="${news.title || ''}"></td>
-                    <td>${date}</td>
-                    <td><span class="px-2 py-1 text-xs font-semibold rounded-full ${categoryClass}">${categoryText}</span></td>
-                    <td><a href="${news.url}" target="_blank" class="text-blue-600 hover:underline">${news.title || '(タイトルなし)'}</a></td>
-                    <td class="whitespace-nowrap">
-                        <button class="btn btn-primary btn-sm analyze-button" data-id="${news.id}" data-url="${news.url}" data-category="${news.category}">分析・登録</button>
-                        <button class="btn btn-secondary btn-sm reject-button" data-id="${news.id}" data-title="${news.title || ''}">却下</button>
-                    </td>
-                </tr>`;
-            candidateNewsListBody.insertAdjacentHTML('beforeend', row);
+        if (filteredCandidates.length > 0) {
+            filteredCandidates.sort((a, b) => {
+                const timeA = a.discoveredAt ? a.discoveredAt.seconds : 0;
+                const timeB = b.discoveredAt ? b.discoveredAt.seconds : 0;
+                return timeB - timeA;
+            });
+            filteredCandidates.forEach(renderCandidateNewsRow);
+        } else {
+            candidateNewsListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">このカテゴリの候補ニュースはありません。</td></tr>`;
         }
+        updateBulkActionUI();
+    }
+    
+    function renderRegisteredNewsRow(news) {
+        const date = news.registeredAt ? new Date(news.registeredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
         
-        function renderInquiriesList() {
-            inquiriesListBody.innerHTML = '';
-            if (allInquiries.length > 0) {
-                allInquiries.forEach(renderInquiryRow);
-            } else {
-                inquiriesListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">問い合わせはありません。</td></tr>`;
-            }
+        let categoryText = "その他";
+        let categoryClass = "bg-gray-100 text-gray-700";
+        if(news.category === 'funding') {
+            categoryText = '資金調達';
+            categoryClass = 'bg-sky-100 text-sky-700';
+        } else if (news.category === 'alliance') {
+            categoryText = '事業提携';
+            categoryClass = 'bg-emerald-100 text-emerald-700';
+        } else if (news.category === 'vc_news') {
+            categoryText = 'VC動向';
+            categoryClass = 'bg-purple-100 text-purple-700';
         }
 
-        function renderInquiryRow(inquiry) {
-            const date = inquiry.createdAt ? new Date(inquiry.createdAt.seconds * 1000).toLocaleString('ja-JP') : '日時不明';
-            const email = inquiry.email || '（記載なし）';
-            const status = inquiry.status || 'new';
+        const row = `<tr><td>${date}</td><td><span class="px-2 py-1 text-xs font-semibold rounded-full ${categoryClass}">${categoryText}</span></td><td>${news.title || '(タイトルなし)'}</td><td class="whitespace-nowrap"><button class="btn btn-success btn-sm edit-button" data-id="${news.id}">編集</button> <button class="btn btn-danger btn-sm delete-button" data-id="${news.id}" data-title="${news.title || ''}">削除</button></td></tr>`;
+        newsListBody.insertAdjacentHTML('beforeend', row);
+    }
 
-            const row = `
-                <tr>
-                    <td>${date}</td>
-                    <td>${email}</td>
-                    <td class="comment-cell">${inquiry.comment}</td>
-                    <td>${status}</td>
-                    <td class="whitespace-nowrap">
-                        <button class="btn btn-danger btn-sm delete-inquiry-button" data-id="${inquiry.id}">削除</button>
-                    </td>
-                </tr>`;
-            inquiriesListBody.insertAdjacentHTML('beforeend', row);
+    function renderCandidateNewsRow(news) {
+        const date = news.discoveredAt ? new Date(news.discoveredAt.seconds * 1000).toLocaleDateString('ja-JP') : '日付不明';
+        let categoryText = "その他";
+        let categoryClass = "bg-gray-100 text-gray-700";
+        if(news.category === 'funding') {
+            categoryText = '資金調達';
+            categoryClass = 'bg-sky-100 text-sky-700';
+        } else if (news.category === 'alliance') {
+            categoryText = '事業提携';
+            categoryClass = 'bg-emerald-100 text-emerald-700';
+        } else if (news.category === 'vc_news') {
+            categoryText = 'VC動向';
+            categoryClass = 'bg-purple-100 text-purple-700';
         }
+        const row = `
+            <tr>
+                <td><input type="checkbox" class="candidate-checkbox" data-id="${news.id}" data-url="${news.url}" data-category="${news.category}" data-title="${news.title || ''}"></td>
+                <td>${date}</td>
+                <td><span class="px-2 py-1 text-xs font-semibold rounded-full ${categoryClass}">${categoryText}</span></td>
+                <td><a href="${news.url}" target="_blank" class="text-blue-600 hover:underline">${news.title || '(タイトルなし)'}</a></td>
+                <td class="whitespace-nowrap">
+                    <button class="btn btn-primary btn-sm analyze-button" data-id="${news.id}" data-url="${news.url}" data-category="${news.category}">分析・登録</button>
+                    <button class="btn btn-secondary btn-sm reject-button" data-id="${news.id}" data-title="${news.title || ''}">却下</button>
+                </td>
+            </tr>`;
+        candidateNewsListBody.insertAdjacentHTML('beforeend', row);
+    }
+    
+    function renderInquiriesList() {
+        inquiriesListBody.innerHTML = '';
+        if (allInquiries.length > 0) {
+            allInquiries.forEach(renderInquiryRow);
+        } else {
+            inquiriesListBody.innerHTML = `<tr><td colspan="5" class="text-center p-4">問い合わせはありません。</td></tr>`;
+        }
+    }
 
-        document.getElementById('addNewsForm').addEventListener('submit', handleManualAdd);
-        fetchCandidatesButton.addEventListener('click', handleFetchCandidates);
-        document.querySelectorAll('input[name="newsCategoryFilter"]').forEach(radio => radio.addEventListener('change', renderFilteredLists));
+    function renderInquiryRow(inquiry) {
+        const date = inquiry.createdAt ? new Date(inquiry.createdAt.seconds * 1000).toLocaleString('ja-JP') : '日時不明';
+        const email = inquiry.email || '（記載なし）';
+        const status = inquiry.status || 'new';
+
+        const row = `
+            <tr>
+                <td>${date}</td>
+                <td>${email}</td>
+                <td class="comment-cell">${inquiry.comment}</td>
+                <td>${status}</td>
+                <td class="whitespace-nowrap">
+                    <button class="btn btn-danger btn-sm delete-inquiry-button" data-id="${inquiry.id}">削除</button>
+                </td>
+            </tr>`;
+        inquiriesListBody.insertAdjacentHTML('beforeend', row);
+    }
+
+    document.getElementById('addNewsForm').addEventListener('submit', handleBulkAdd);
+    fetchCandidatesButton.addEventListener('click', handleFetchCandidates);
+    document.querySelectorAll('input[name="newsCategoryFilter"]').forEach(radio => radio.addEventListener('change', renderFilteredLists));
+    
+    selectAllCandidatesCheckbox.addEventListener('change', handleSelectAll);
+    candidateNewsListBody.addEventListener('change', (e) => e.target.classList.contains('candidate-checkbox') && updateBulkActionUI());
+    candidateNewsListBody.addEventListener('click', handleCandidateActions);
+    bulkAnalyzeButton.addEventListener('click', handleBulkAnalyze);
+    bulkRejectButton.addEventListener('click', handleBulkReject);
+
+    newsListBody.addEventListener('click', handleRegisteredNewsActions);
+    inquiriesListBody.addEventListener('click', handleInquiryActions);
+
+    document.getElementById('closeModalButton').addEventListener('click', () => editModal.style.display = 'none');
+    document.getElementById('confirmCancelButton').addEventListener('click', () => confirmationModal.style.display = 'none');
+    document.getElementById('confirmActionButton').addEventListener('click', () => {
+        if (onConfirmCallback) {
+            onConfirmCallback().catch(err => displayMessage(`操作に失敗しました: ${err.message}`, true));
+        }
+        confirmationModal.style.display = 'none';
+    });
+    editNewsForm.addEventListener('submit', handleEditFormSubmit);
+
+    async function handleFetchCandidates() {
+         const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
+         displayMessage(`${selectedCategory === 'funding' ? '資金調達' : selectedCategory === 'alliance' ? '事業提携' : 'VC動向'}の候補ニュースを取得中です...`, false);
+         fetchCandidatesButton.disabled = true;
+         try {
+             const functionUrl = `${fetchCandidateNewsUrlBase}?category=${selectedCategory}`;
+             const response = await fetch(functionUrl);
+             const result = await response.json();
+             if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
+             
+             displayMessage(result.message, false);
+             await new Promise(resolve => setTimeout(resolve, 2000));
+
+             await fetchAndStoreCandidateNews();
+             renderFilteredLists();
+         } catch(error) {
+             displayMessage(`エラー: ${error.message}`, true);
+         } finally {
+             fetchCandidatesButton.disabled = false;
+         }
+    }
+    
+    async function handleBulkAdd(e) {
+        e.preventDefault();
+        const urls = document.getElementById('newsUrls').value.trim().split('\n').filter(url => url);
+        const category = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
+        if (urls.length === 0) return displayMessage("URLを入力してください。", true);
         
-        selectAllCandidatesCheckbox.addEventListener('change', handleSelectAll);
-        candidateNewsListBody.addEventListener('change', (e) => e.target.classList.contains('candidate-checkbox') && updateBulkActionUI());
-        candidateNewsListBody.addEventListener('click', handleCandidateActions);
-        bulkAnalyzeButton.addEventListener('click', handleBulkAnalyze);
-        bulkRejectButton.addEventListener('click', handleBulkReject);
-
-        newsListBody.addEventListener('click', handleRegisteredNewsActions);
-        inquiriesListBody.addEventListener('click', handleInquiryActions);
-
-        document.getElementById('closeModalButton').addEventListener('click', () => editModal.style.display = 'none');
-        document.getElementById('confirmCancelButton').addEventListener('click', () => confirmationModal.style.display = 'none');
-        document.getElementById('confirmActionButton').addEventListener('click', () => {
-            if (onConfirmCallback) {
-                onConfirmCallback().catch(err => displayMessage(`操作に失敗しました: ${err.message}`, true));
-            }
-            confirmationModal.style.display = 'none';
-        });
-        editNewsForm.addEventListener('submit', handleEditFormSubmit);
-
-        async function handleFetchCandidates() {
-             const selectedCategory = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
-             displayMessage(`${selectedCategory === 'funding' ? '資金調達' : '事業提携'}の候補ニュースを取得中です...`, false);
-             fetchCandidatesButton.disabled = true;
+        isBulkProcessing = true;
+        submitButton.disabled = true;
+        
+        let successCount = 0, errorCount = 0;
+        for (const [index, url] of urls.entries()) {
+             processingIndicator.textContent = `[${index + 1}/${urls.length}] 処理中: ${url}`;
+             processingIndicator.style.display = 'block';
              try {
-                 const functionUrl = `${fetchCandidateNewsUrlBase}?category=${selectedCategory}`;
-                 const response = await fetch(functionUrl);
-                 const result = await response.json();
-                 if (!response.ok) throw new Error(result.message || "候補の取得に失敗しました。");
-                 
-                 displayMessage(result.message, false);
-                 await new Promise(resolve => setTimeout(resolve, 2000));
-
-                 await fetchAndStoreCandidateNews();
-                 renderFilteredLists();
-             } catch(error) {
-                 displayMessage(`エラー: ${error.message}`, true);
-             } finally {
-                 fetchCandidatesButton.disabled = false;
+                 await analyzeAndRegisterNews(url, category);
+                 successCount++;
+             } catch (error) {
+                 errorCount++;
+                 displayMessage(`[${index + 1}/${urls.length}] エラー: ${url} - ${error.message}`, true);
              }
         }
         
-        async function handleManualAdd(e) {
-            e.preventDefault();
-            const urlsText = document.getElementById('newsUrls').value.trim();
-            const urls = urlsText.split('\n').map(url => url.trim()).filter(url => url.length > 0);
-            const category = document.querySelector('input[name="newsCategoryFilter"]:checked').value;
-
-            if (urls.length === 0) {
-                return displayMessage("URLを1つ以上入力してください。", true);
-            }
-
-            isBulkProcessing = true; // 処理中の再描画を抑制
-            submitButton.disabled = true;
-            submitButton.textContent = '処理中...';
-            
-            let successCount = 0;
-            let errorCount = 0;
-
-            for (let i = 0; i < urls.length; i++) {
-                const url = urls[i];
-                displayMessage(`[${i + 1}/${urls.length}] 処理中: ${url}`, false);
-                try {
-                    await analyzeAndRegisterNews(url, category);
-                    successCount++;
-                } catch (error) {
-                    errorCount++;
-                    console.error(`Error processing ${url}:`, error);
-                }
-            }
-
-            displayMessage(`一括処理完了: ${successCount}件成功, ${errorCount}件失敗`, errorCount > 0);
-            
-            await fetchAllData(); // 最後に一度だけ全データを更新
-
-            isBulkProcessing = false;
-            submitButton.disabled = false;
-            submitButton.textContent = '一括で記事を登録・分析';
-            document.getElementById('newsUrls').value = '';
-        }
-
-        async function handleCandidateActions(event) {
-            const target = event.target;
-            if (!target.classList.contains('analyze-button') && !target.classList.contains('reject-button')) return;
-            const { id, url, category, title } = target.dataset;
-            if (target.classList.contains('analyze-button')) {
-                target.disabled = true;
-                target.textContent = '処理中';
-                await analyzeAndRegisterNews(url, category, id).catch(err => console.error(err));
-            } else if (target.classList.contains('reject-button')) {
-                showConfirmationModal(`候補「${title}」を却下しますか？`, async () => {
-                    await deleteDoc(doc(db, candidateNewsCollectionPath, id));
-                    displayMessage("候補を却下しました。", false);
-                    await fetchAndStoreCandidateNews();
-                    renderFilteredLists();
-                });
-            }
-        }
-
-        async function handleRegisteredNewsActions(event) {
-            const target = event.target;
-            if (!target.classList.contains('edit-button') && !target.classList.contains('delete-button')) return;
-            const { id, title } = target.dataset;
-            if (target.classList.contains('edit-button')) {
-                openEditModal(id);
-            } else if (target.classList.contains('delete-button')) {
-                showConfirmationModal(`記事「${title}」を本当に削除しますか？`, async () => {
-                    await deleteDoc(doc(db, newsCollectionPath, id));
-                    displayMessage("ニュースを削除しました。", false);
-                    await fetchAndStoreRegisteredNews();
-                    renderFilteredLists();
-                });
-            }
-        }
+        processingIndicator.style.display = 'none';
+        displayMessage(`一括処理完了: ${successCount}件成功, ${errorCount}件失敗`, errorCount > 0);
         
-        async function handleInquiryActions(event) {
-            const target = event.target;
-            if (target.classList.contains('delete-inquiry-button')) {
-                const { id } = target.dataset;
-                showConfirmationModal(`この問い合わせを削除しますか？`, async () => {
-                    await deleteDoc(doc(db, inquiriesCollectionPath, id));
-                    displayMessage("問い合わせを削除しました。", false);
-                    await fetchAndStoreInquiries();
-                    renderInquiriesList();
-                });
-            }
-        }
+        isBulkProcessing = false;
+        submitButton.disabled = false;
+        document.getElementById('newsUrls').value = '';
+        await fetchAllData();
+    }
 
-        function handleSelectAll(e) {
-            document.querySelectorAll('.candidate-checkbox').forEach(checkbox => {
-                checkbox.checked = e.target.checked;
-            });
-            updateBulkActionUI();
-        }
-
-        function updateBulkActionUI() {
-            const selectedCheckboxes = document.querySelectorAll('.candidate-checkbox:checked');
-            const selectedCount = selectedCheckboxes.length;
-            if (selectedCount > 0) {
-                bulkActionContainer.style.display = 'flex';
-                selectionCounter.textContent = `${selectedCount}件選択中`;
-            } else {
-                bulkActionContainer.style.display = 'none';
-            }
-            selectAllCandidatesCheckbox.checked = document.querySelectorAll('.candidate-checkbox').length > 0 && selectedCount === document.querySelectorAll('.candidate-checkbox').length;
-        }
-        
-        function getSelectedCandidates() {
-            return Array.from(document.querySelectorAll('.candidate-checkbox:checked')).map(cb => cb.dataset);
-        }
-        
-        async function handleBulkAnalyze() {
-            const selected = getSelectedCandidates();
-            if (selected.length === 0) return;
-            showConfirmationModal(`${selected.length}件のニュースを分析・登録しますか？`, async () => {
-                isBulkProcessing = true;
-                bulkAnalyzeButton.disabled = true;
-                bulkAnalyzeButton.textContent = '処理中...';
-                displayMessage(`${selected.length}件の一括処理を開始します...`, false);
-                let successCount = 0, errorCount = 0;
-                for (const item of selected) {
-                    try {
-                        await analyzeAndRegisterNews(item.url, item.category, item.id);
-                        successCount++;
-                        displayMessage(`[${successCount + errorCount}/${selected.length}] 「${item.title}」を登録しました。`, false);
-                    } catch (error) {
-                        errorCount++;
-                        displayMessage(`[${successCount + errorCount}/${selected.length}] 「${item.title}」の処理中にエラーが発生しました。`, true);
-                    }
-                }
-                displayMessage(`一括処理完了: ${successCount}件成功, ${errorCount}件失敗`, errorCount > 0);
-                await fetchAllData();
-                isBulkProcessing = false;
-                bulkAnalyzeButton.disabled = false;
-                bulkAnalyzeButton.textContent = '選択した項目を分析・登録';
+    async function handleCandidateActions(event) {
+        const target = event.target;
+        if (!target.classList.contains('analyze-button') && !target.classList.contains('reject-button')) return;
+        const { id, url, category, title } = target.dataset;
+        if (target.classList.contains('analyze-button')) {
+            target.disabled = true;
+            target.textContent = '処理中';
+            await analyzeAndRegisterNews(url, category, id).catch(err => console.error(err));
+        } else if (target.classList.contains('reject-button')) {
+            showConfirmationModal(`候補「${title}」を却下しますか？`, async () => {
+                await deleteDoc(doc(db, candidateNewsCollectionPath, id));
+                displayMessage("候補を却下しました。", false);
+                await fetchAndStoreCandidateNews();
+                renderFilteredLists();
             });
         }
-        
-        async function handleBulkReject() {
-            const selected = getSelectedCandidates();
-            if (selected.length === 0) return;
-            showConfirmationModal(`${selected.length}件の候補を却下しますか？`, async () => {
-                const batch = writeBatch(db);
-                selected.forEach(item => batch.delete(doc(db, candidateNewsCollectionPath, item.id)));
-                try {
-                    await batch.commit();
-                    displayMessage(`${selected.length}件の候補を却下しました。`, false);
-                    await fetchAndStoreCandidateNews();
-                    renderFilteredLists();
-                } catch(error) {
-                    displayMessage(`一括却下中にエラーが発生しました: ${error.message}`, true);
-                }
-            });
-        }
+    }
 
-        async function analyzeAndRegisterNews(url, category, candidateId = null) {
-            if (!userId) { throw new Error("ユーザー認証が完了していません。"); }
-            try {
-                const response = await fetch(processNewsUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url, userId, category }),
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.message || `サーバーエラー: ${response.status}`);
-                
-                if (candidateId) { // もし候補リストから来たものなら、それを削除
-                    await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
-                }
-                
-                // isBulkProcessingフラグがtrueの場合、個別の再描画は行わず、最後にまとめて行う
-                if (!isBulkProcessing) {
-                    displayMessage(`「${result.data.title}」を登録しました。`, false);
-                    await fetchAllData();
-                }
-            } catch (error) {
-                console.error("分析・登録処理エラー:", error);
-                if (!isBulkProcessing) displayMessage(`エラー: ${error.message}`, true);
-                throw error;
-            }
-        }
-        
-        function displayMessage(message, isError = false) {
-             messageArea.textContent = message;
-             messageArea.className = 'message-area';
-             messageArea.style.display = 'block';
-             messageArea.classList.add(isError ? 'message-error' : 'message-success');
-        }
-
-        function showConfirmationModal(message, callback) {
-            onConfirmCallback = callback;
-            confirmationModal.querySelector('#confirmationMessage').textContent = message;
-            confirmationModal.style.display = 'flex';
-        }
-
-        async function openEditModal(newsId) {
-            const docRef = doc(db, newsCollectionPath, newsId);
-            const docSnap = await getDoc(docRef);
-            if (!docSnap.exists()) {
-                displayMessage("編集対象のニュースが見つかりません。", true);
-                return;
-            }
-            const data = docSnap.data();
-            const category = data.category || 'funding';
-            
-            document.getElementById('editNewsId').value = newsId;
-            document.getElementById('editNewsCategory').value = category;
-
-            if (data.registeredAt) {
-                const registeredDate = data.registeredAt.toDate();
-                const year = registeredDate.getFullYear();
-                const month = String(registeredDate.getMonth() + 1).padStart(2, '0');
-                const day = String(registeredDate.getDate()).padStart(2, '0');
-                document.getElementById('editRegisteredAt').value = `${year}-${month}-${day}`;
-            }
-
-            const fundingFields = document.getElementById('funding-fields');
-            const allianceFields = document.getElementById('alliance-fields');
-            
-            if (category === 'alliance') {
-                fundingFields.style.display = 'none';
-                allianceFields.style.display = 'block';
-                document.getElementById('editAllianceTitle').value = data.title || '';
-                document.getElementById('editPrimaryCompany').value = data.primaryCompany || '';
-                document.getElementById('editPartnerCompany').value = data.partnerCompany || '';
-                document.getElementById('editAllianceType').value = data.allianceType || '';
-                document.getElementById('editAllianceSummary').value = data.summary || '';
-                document.getElementById('editSynergyAnalysis').value = data.synergyAnalysis || '';
-                document.getElementById('editRiskAnalysis').value = data.riskAnalysis || '';
-                document.getElementById('editFutureOutlook').value = data.futureOutlook || '';
-            } else {
-                allianceFields.style.display = 'none';
-                fundingFields.style.display = 'block';
-                document.getElementById('editTitle').value = data.title || '';
-                document.getElementById('editStartupName').value = data.startupName || '';
-                document.getElementById('editBusinessDescription').value = data.businessDescription || '';
-                document.getElementById('editRound').value = data.round || '';
-                document.getElementById('editFundingAmount').value = data.fundingAmount || '';
-                document.getElementById('editLeadInvestor').value = data.leadInvestor || '';
-                document.getElementById('editSummary').value = data.summary || '';
-                document.getElementById('editPositiveAnalysis').value = data.positiveAnalysis || '';
-                document.getElementById('editNegativeAnalysis').value = data.negativeAnalysis || '';
-                document.getElementById('editExitOutlook').value = data.exitOutlook || '';
-            }
-            editModal.style.display = 'flex';
-        }
-
-        async function handleEditFormSubmit(event) {
-            event.preventDefault();
-            const newsId = document.getElementById('editNewsId').value;
-            const category = document.getElementById('editNewsCategory').value;
-            let updatedData = {};
-
-            const newDateString = document.getElementById('editRegisteredAt').value;
-            if (newDateString) {
-                const newDate = new Date(newDateString);
-                updatedData.registeredAt = Timestamp.fromDate(newDate);
-            }
-
-            if (category === 'alliance') {
-                updatedData = {
-                    ...updatedData,
-                    title: document.getElementById('editAllianceTitle').value,
-                    primaryCompany: document.getElementById('editPrimaryCompany').value,
-                    partnerCompany: document.getElementById('editPartnerCompany').value,
-                    allianceType: document.getElementById('editAllianceType').value,
-                    summary: document.getElementById('editAllianceSummary').value,
-                    synergyAnalysis: document.getElementById('editSynergyAnalysis').value,
-                    riskAnalysis: document.getElementById('editRiskAnalysis').value,
-                    futureOutlook: document.getElementById('editFutureOutlook').value,
-                };
-            } else {
-                updatedData = {
-                    ...updatedData,
-                    title: document.getElementById('editTitle').value,
-                    startupName: document.getElementById('editStartupName').value,
-                    businessDescription: document.getElementById('editBusinessDescription').value,
-                    round: document.getElementById('editRound').value,
-                    fundingAmount: document.getElementById('editFundingAmount').value,
-                    leadInvestor: document.getElementById('editLeadInvestor').value,
-                    summary: document.getElementById('editSummary').value,
-                    positiveAnalysis: document.getElementById('editPositiveAnalysis').value,
-                    negativeAnalysis: document.getElementById('editNegativeAnalysis').value,
-                    exitOutlook: document.getElementById('editExitOutlook').value,
-                };
-            }
-            try {
-                const docRef = doc(db, newsCollectionPath, newsId);
-                await updateDoc(docRef, updatedData);
-                displayMessage("ニュース情報を更新しました。", false);
-                editModal.style.display = 'none';
+    async function handleRegisteredNewsActions(event) {
+        const target = event.target;
+        if (!target.classList.contains('edit-button') && !target.classList.contains('delete-button')) return;
+        const { id, title } = target.dataset;
+        if (target.classList.contains('edit-button')) {
+            openEditModal(id);
+        } else if (target.classList.contains('delete-button')) {
+            showConfirmationModal(`記事「${title}」を本当に削除しますか？`, async () => {
+                await deleteDoc(doc(db, newsCollectionPath, id));
+                displayMessage("ニュースを削除しました。", false);
                 await fetchAndStoreRegisteredNews();
                 renderFilteredLists();
-            } catch (error) {
-                displayMessage("更新に失敗しました。", true);
-                console.error("Update failed: ", error);
+            });
+        }
+    }
+    
+    async function handleInquiryActions(event) {
+        const target = event.target;
+        if (target.classList.contains('delete-inquiry-button')) {
+            const { id } = target.dataset;
+            showConfirmationModal(`この問い合わせを削除しますか？`, async () => {
+                await deleteDoc(doc(db, inquiriesCollectionPath, id));
+                displayMessage("問い合わせを削除しました。", false);
+                await fetchAndStoreInquiries();
+                renderInquiriesList();
+            });
+        }
+    }
+
+    function handleSelectAll(e) {
+        document.querySelectorAll('.candidate-checkbox').forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+        updateBulkActionUI();
+    }
+
+    function updateBulkActionUI() {
+        const selectedCheckboxes = document.querySelectorAll('.candidate-checkbox:checked');
+        const selectedCount = selectedCheckboxes.length;
+        if (selectedCount > 0) {
+            bulkActionContainer.style.display = 'flex';
+            selectionCounter.textContent = `${selectedCount}件選択中`;
+        } else {
+            bulkActionContainer.style.display = 'none';
+        }
+        selectAllCandidatesCheckbox.checked = document.querySelectorAll('.candidate-checkbox').length > 0 && selectedCount === document.querySelectorAll('.candidate-checkbox').length;
+    }
+    
+    function getSelectedCandidates() {
+        return Array.from(document.querySelectorAll('.candidate-checkbox:checked')).map(cb => cb.dataset);
+    }
+    
+    async function handleBulkAnalyze() {
+        const selected = getSelectedCandidates();
+        if (selected.length === 0) return;
+        showConfirmationModal(`${selected.length}件のニュースを分析・登録しますか？`, async () => {
+            isBulkProcessing = true;
+            bulkAnalyzeButton.disabled = true;
+            bulkAnalyzeButton.textContent = '処理中...';
+            displayMessage(`${selected.length}件の一括処理を開始します...`, false);
+            let successCount = 0, errorCount = 0;
+            for (const item of selected) {
+                try {
+                    await analyzeAndRegisterNews(item.url, item.category, item.id);
+                    successCount++;
+                    displayMessage(`[${successCount + errorCount}/${selected.length}] 「${item.title}」を登録しました。`, false);
+                } catch (error) {
+                    errorCount++;
+                    displayMessage(`[${successCount + errorCount}/${selected.length}] 「${item.title}」の処理中にエラーが発生しました。`, true);
+                }
+            }
+            displayMessage(`一括処理完了: ${successCount}件成功, ${errorCount}件失敗`, errorCount > 0);
+            await fetchAllData();
+            isBulkProcessing = false;
+            bulkAnalyzeButton.disabled = false;
+            bulkAnalyzeButton.textContent = '選択した項目を分析・登録';
+        });
+    }
+    
+    async function handleBulkReject() {
+        const selected = getSelectedCandidates();
+        if (selected.length === 0) return;
+        showConfirmationModal(`${selected.length}件の候補を却下しますか？`, async () => {
+            const batch = writeBatch(db);
+            selected.forEach(item => batch.delete(doc(db, candidateNewsCollectionPath, item.id)));
+            try {
+                await batch.commit();
+                displayMessage(`${selected.length}件の候補を却下しました。`, false);
+                await fetchAndStoreCandidateNews();
+                renderFilteredLists();
+            } catch(error) {
+                displayMessage(`一括却下中にエラーが発生しました: ${error.message}`, true);
+            }
+        });
+    }
+
+    async function analyzeAndRegisterNews(url, category, candidateId = null) {
+        if (!userId) { throw new Error("ユーザー認証が完了していません。"); }
+        if (!isBulkProcessing) {
+            processingIndicator.textContent = '処理中... しばらくお待ちください。';
+            processingIndicator.style.display = 'block';
+        }
+        try {
+            const response = await fetch(processNewsUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url, userId, category }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || `サーバーエラー: ${response.status}`);
+            
+            if (candidateId) {
+                await deleteDoc(doc(db, candidateNewsCollectionPath, candidateId));
+            }
+
+            if (!isBulkProcessing) {
+                 displayMessage(`「${result.data.title}」を登録しました。`, false);
+                 await fetchAllData();
+            }
+        } catch (error) {
+            console.error("分析・登録処理エラー:", error);
+            if (!isBulkProcessing) displayMessage(`エラー: ${error.message}`, true);
+            throw error; // Re-throw for bulk processing to catch
+        } finally {
+            if (!isBulkProcessing) {
+                processingIndicator.style.display = 'none';
             }
         }
-    </script>
+    }
+    
+    function displayMessage(message, isError = false) {
+         messageArea.textContent = message;
+         messageArea.className = 'message-area';
+         messageArea.style.display = 'block';
+         messageArea.classList.add(isError ? 'message-error' : 'message-success');
+    }
+
+    function showConfirmationModal(message, callback) {
+        onConfirmCallback = callback;
+        confirmationModal.querySelector('#confirmationMessage').textContent = message;
+        confirmationModal.style.display = 'flex';
+    }
+
+    async function openEditModal(newsId) {
+        const docRef = doc(db, newsCollectionPath, newsId);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) {
+            displayMessage("編集対象のニュースが見つかりません。", true);
+            return;
+        }
+        const data = docSnap.data();
+        const category = data.category || 'funding';
+        
+        document.getElementById('editNewsId').value = newsId;
+        document.getElementById('editNewsCategory').value = category;
+
+        if (data.registeredAt) {
+            const registeredDate = data.registeredAt.toDate();
+            const year = registeredDate.getFullYear();
+            const month = String(registeredDate.getMonth() + 1).padStart(2, '0');
+            const day = String(registeredDate.getDate()).padStart(2, '0');
+            document.getElementById('editRegisteredAt').value = `${year}-${month}-${day}`;
+        }
+
+        document.getElementById('funding-fields').style.display = 'none';
+        document.getElementById('alliance-fields').style.display = 'none';
+        document.getElementById('vc_news-fields').style.display = 'none';
+        
+        if (category === 'alliance') {
+            document.getElementById('alliance-fields').style.display = 'block';
+            document.getElementById('editAllianceTitle').value = data.title || '';
+            document.getElementById('editPrimaryCompany').value = data.primaryCompany || '';
+            document.getElementById('editPartnerCompany').value = data.partnerCompany || '';
+            document.getElementById('editAllianceType').value = data.allianceType || '';
+            document.getElementById('editAllianceSummary').value = data.summary || '';
+            document.getElementById('editSynergyAnalysis').value = data.synergyAnalysis || '';
+            document.getElementById('editRiskAnalysis').value = data.riskAnalysis || '';
+            document.getElementById('editFutureOutlook').value = data.futureOutlook || '';
+        } else if (category === 'vc_news') {
+            document.getElementById('vc_news-fields').style.display = 'block';
+            document.getElementById('editVcNewsTitle').value = data.title || '';
+            document.getElementById('editVcNewsStartupName').value = data.startupName || '';
+            document.getElementById('editVcNewsBusinessDescription').value = data.businessDescription || '';
+            document.getElementById('editVcNewsFundingAmount').value = data.fundingAmount || '';
+            document.getElementById('editVcNewsSummary').value = data.summary || '';
+            document.getElementById('editVcNewsPositiveAnalysis').value = data.positiveAnalysis || '';
+            document.getElementById('editVcNewsNegativeAnalysis').value = data.negativeAnalysis || '';
+            document.getElementById('editVcNewsLPOutlook').value = data.LPOutlook || '';
+        } else { // funding
+            document.getElementById('funding-fields').style.display = 'block';
+            document.getElementById('editTitle').value = data.title || '';
+            document.getElementById('editStartupName').value = data.startupName || '';
+            document.getElementById('editBusinessDescription').value = data.businessDescription || '';
+            document.getElementById('editRound').value = data.round || '';
+            document.getElementById('editFundingAmount').value = data.fundingAmount || '';
+            document.getElementById('editLeadInvestor').value = data.leadInvestor || '';
+            document.getElementById('editSummary').value = data.summary || '';
+            document.getElementById('editPositiveAnalysis').value = data.positiveAnalysis || '';
+            document.getElementById('editNegativeAnalysis').value = data.negativeAnalysis || '';
+            document.getElementById('editExitOutlook').value = data.exitOutlook || '';
+        }
+        editModal.style.display = 'flex';
+    }
+
+    async function handleEditFormSubmit(event) {
+        event.preventDefault();
+        const newsId = document.getElementById('editNewsId').value;
+        const category = document.getElementById('editNewsCategory').value;
+        let updatedData = {};
+
+        const newDateString = document.getElementById('editRegisteredAt').value;
+        if (newDateString) {
+            const newDate = new Date(newDateString);
+            updatedData.registeredAt = Timestamp.fromDate(newDate);
+        }
+
+        if (category === 'alliance') {
+            updatedData = {
+                ...updatedData,
+                title: document.getElementById('editAllianceTitle').value,
+                primaryCompany: document.getElementById('editPrimaryCompany').value,
+                partnerCompany: document.getElementById('editPartnerCompany').value,
+                allianceType: document.getElementById('editAllianceType').value,
+                summary: document.getElementById('editAllianceSummary').value,
+                synergyAnalysis: document.getElementById('editSynergyAnalysis').value,
+                riskAnalysis: document.getElementById('editRiskAnalysis').value,
+                futureOutlook: document.getElementById('editFutureOutlook').value,
+            };
+        } else if (category === 'vc_news') {
+             updatedData = {
+                ...updatedData,
+                title: document.getElementById('editVcNewsTitle').value,
+                startupName: document.getElementById('editVcNewsStartupName').value,
+                businessDescription: document.getElementById('editVcNewsBusinessDescription').value,
+                fundingAmount: document.getElementById('editVcNewsFundingAmount').value,
+                summary: document.getElementById('editVcNewsSummary').value,
+                positiveAnalysis: document.getElementById('editVcNewsPositiveAnalysis').value,
+                negativeAnalysis: document.getElementById('editVcNewsNegativeAnalysis').value,
+                LPOutlook: document.getElementById('editVcNewsLPOutlook').value,
+            };
+        } else { // funding
+            updatedData = {
+                ...updatedData,
+                title: document.getElementById('editTitle').value,
+                startupName: document.getElementById('editStartupName').value,
+                businessDescription: document.getElementById('editBusinessDescription').value,
+                round: document.getElementById('editRound').value,
+                fundingAmount: document.getElementById('editFundingAmount').value,
+                leadInvestor: document.getElementById('editLeadInvestor').value,
+                summary: document.getElementById('editSummary').value,
+                positiveAnalysis: document.getElementById('editPositiveAnalysis').value,
+                negativeAnalysis: document.getElementById('editNegativeAnalysis').value,
+                exitOutlook: document.getElementById('editExitOutlook').value,
+            };
+        }
+        try {
+            const docRef = doc(db, newsCollectionPath, newsId);
+            await updateDoc(docRef, updatedData);
+            displayMessage("ニュース情報を更新しました。", false);
+            editModal.style.display = 'none';
+            await fetchAndStoreRegisteredNews();
+            renderFilteredLists();
+        } catch (error) {
+            displayMessage("更新に失敗しました。", true);
+            console.error("Update failed: ", error);
+        }
+    }
+</script>
 </body>
 </html>
 
